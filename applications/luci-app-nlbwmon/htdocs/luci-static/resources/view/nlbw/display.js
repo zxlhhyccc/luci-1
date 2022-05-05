@@ -359,7 +359,13 @@ return view.extend({
 			conn_total += rec.conns;
 		}
 
-		cbi_update_table('#host-data', rows, E('em', _('No data recorded yet.')));
+		cbi_update_table('#host-data', rows, E('em', [
+			_('No data recorded yet.'), ' ',
+			E('a', {
+				'href': '#',
+				'click': ui.createHandlerFn(this, 'handleCommit')
+			}, _('Force reload…'))
+		]));
 
 		this.pie('traf-pie', trafData);
 		this.pie('conn-pie', connData);
@@ -413,7 +419,10 @@ return view.extend({
 			}
 		}
 
-		cbi_update_table('#layer7-data', rows, E('em', 	_('No data recorded yet.')));
+		cbi_update_table('#layer7-data', rows, E('em', [
+			_('No data recorded yet.'), ' ',
+			E('a', { 'href': L.url('admin/nlbw/commit') }, _('Force reload…'))
+		]));
 
 		this.pie('layer7-rx-pie', rxData);
 		this.pie('layer7-tx-pie', txData);
@@ -514,7 +523,10 @@ return view.extend({
 			]);
 		}
 
-		cbi_update_table('#ipv6-data', rows, E('em', _('No data recorded yet.')));
+		cbi_update_table('#ipv6-data', rows, E('em', [
+			_('No data recorded yet.'), ' ',
+			E('a', { 'href': L.url('admin/nlbw/commit') }, _('Force reload…'))
+		]));
 
 		var shareData = [], hostsData = [];
 
@@ -844,13 +856,6 @@ return view.extend({
 								E('em', { 'class': 'spinning' }, [ _('Collecting data...') ])
 							])
 						])
-					]),
-					E('div', { 'class': 'right' }, [
-						E('button', {
-							'class': 'cbi-button',
-							'click': ui.createHandlerFn(this, 'handleCommit')
-							}, _('Force reload…')
-						)
 					])
 				]),
 
@@ -890,13 +895,6 @@ return view.extend({
 								E('em', { 'class': 'spinning' }, [ _('Collecting data...') ])
 							])
 						])
-					]),
-					E('div', { 'class': 'right' }, [
-						E('button', {
-							'class': 'cbi-button',
-							'click': ui.createHandlerFn(this, 'handleCommit')
-							}, _('Force reload…')
-						)
 					])
 				]),
 
@@ -937,53 +935,34 @@ return view.extend({
 								E('em', { 'class': 'spinning' }, [ _('Collecting data...') ])
 							])
 						])
-					]),
-					E('div', { 'class': 'right' }, [
-						E('button', {
-							'class': 'cbi-button',
-							'click': ui.createHandlerFn(this, 'handleCommit')
-							}, _('Force reload…')
-						)
 					])
 				]),
 
 				E('div', { 'class': 'cbi-section', 'data-tab': 'export', 'data-tab-title': _('Export') }, [
-					E('div', { 'class': 'cbi-section-node cbi-sction-node-tabbed' }, [
-						E('div', { 'class': 'cbi-value' }, [
-							E('label', { 'class': 'cbi-value-title' }, _('Grouped by MAC (CSV)')),
-							E('div', { 'class': 'cbi-value-field' }, [
-								E('button', {
-									'class': 'cbi-button',
-									'click': ui.createHandlerFn(this, 'handleDownload', 'csv', 'mac', '-rx,-tx')
-								}, [ _('Export') ])
-							])
+					E('ul', [
+						E('li', [
+							E('a', {
+								'href': '#',
+								'click': ui.createHandlerFn(this, 'handleDownload', 'csv', 'mac', '-rx,-tx')
+							}, [ _('CSV, grouped by MAC') ])
 						]),
-						E('div', { 'class': 'cbi-value' }, [
-							E('label', { 'class': 'cbi-value-title' }, _('Grouped by IP (CSV)')),
-							E('div', { 'class': 'cbi-value-field' }, [
-								E('button', {
-									'class': 'cbi-button',
-									'click': ui.createHandlerFn(this, 'handleDownload', 'csv', 'ip', '-rx,-tx')
-								}, [ _('Export') ])
-							])
+						E('li', [
+							E('a', {
+								'href': '#',
+								'click': ui.createHandlerFn(this, 'handleDownload', 'csv', 'ip', '-rx,-tx')
+							}, [ _('CSV, grouped by IP') ])
 						]),
-						E('div', { 'class': 'cbi-value' }, [
-							E('label', { 'class': 'cbi-value-title' }, _('Grouped by protocol (CSV)')),
-							E('div', { 'class': 'cbi-value-field' }, [
-								E('button', {
-									'class': 'cbi-button',
-									'click': ui.createHandlerFn(this, 'handleDownload', 'csv', 'layer7', '-rx,-tx')
-								}, [ _('Export') ])
-							])
+						E('li', [
+							E('a', {
+								'href': '#',
+								'click': ui.createHandlerFn(this, 'handleDownload', 'csv', 'layer7', '-rx,-tx')
+							}, [ _('CSV, grouped by protocol') ])
 						]),
-						E('div', { 'class': 'cbi-value' }, [
-							E('label', { 'class': 'cbi-value-title' }, _('Dump (JSON)')),
-							E('div', { 'class': 'cbi-value-field' }, [
-								E('button', {
-									'class': 'cbi-button',
-									'click': ui.createHandlerFn(this, 'handleDownload', 'json', null, null)
-								}, [ _('Export') ])
-							])
+						E('li', [
+							E('a', {
+								'href': '#',
+								'click': ui.createHandlerFn(this, 'handleDownload', 'json', null, null)
+							}, [ _('JSON dump') ])
 						])
 					])
 				])

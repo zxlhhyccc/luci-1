@@ -52,14 +52,12 @@ return view.extend({
 			E('h5', [ _('Restore Database Backup') ]),
 			E('p', [
 				E('button', {
-					'class': 'cbi-button',
 					'click': ui.createHandlerFn(this, 'handleArchiveUpload')
 				}, [ _('Restore') ])
 			]),
 			E('h5', [ _('Download Database Backup') ]),
 			E('p', [
 				E('button', {
-					'class': 'cbi-button',
 					'click': ui.createHandlerFn(this, 'handleArchiveDownload', hostname)
 				}, [ _('Generate Backup') ])
 			])
