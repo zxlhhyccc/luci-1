@@ -13,8 +13,8 @@ return network.registerProtocol('6to4', {
 		return this._ubus('l3_device') || '6to4-%s'.format(this.sid);
 	},
 
-	getOpkgPackage: function() {
-		return '6rd';
+	getPackageName: function() {
+		return '6to4';
 	},
 
 	isFloating: function() {

@@ -1,8 +1,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"PO-Revision-Date: 2021-01-29 18:06+0000\n"
-"Last-Translator: Axhyre <axhyre@gmail.com>\n"
+"PO-Revision-Date: 2026-11-05 07:53+0000\n"
+"Last-Translator: Kövecses József <kovecses@users.noreply.hosted.weblate.org>"
+"\n"
 "Language-Team: Hungarian <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationssamba4/hu/>\n"
 "Language: hu\n"
@@ -10,7 +11,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.5-dev\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:120
 msgid "Allow guests"
@@ -18,7 +19,7 @@ msgstr "Vendégek engedélyezése"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:67
 msgid "Allow legacy (insecure) protocols/authentication."
-msgstr "Régi, már nem biztonságos protokollok és autentikáció engedélyezése."
+msgstr "Régi, már nem biztonságos protokollok és hitelesítések engedélyezése."
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:68
 msgid ""
@@ -76,7 +77,7 @@ msgstr ""
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:57
 msgid "Enable extra Tuning"
-msgstr ""
+msgstr "Extra hangolás engedélyezése"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:64
 msgid "Enable macOS compatible shares"
@@ -88,6 +89,9 @@ msgid ""
 "speeds and better operation via WiFi. Not recommend if multiple clients "
 "write to the same files, at the same time!"
 msgstr ""
+"Engedélyezzen néhány közösség által felügyelt hangolási paramétert, amelyek "
+"javíthatják az írási sebességet és a jobb működést WiFi-n keresztül. Nem "
+"ajánlott, ha több kliens ír egy időben ugyanabba a fájlba!"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:65
 msgid ""
@@ -107,11 +111,11 @@ msgstr "Szinkron I/O kényszerítése"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:31
 msgid "General Settings"
-msgstr "Általános Beállítások"
+msgstr "Általános beállítások"
 
 #: applications/luci-app-samba4/root/usr/share/rpcd/acl.d/luci-app-samba4.json:3
 msgid "Grant access to LuCI app samba4"
-msgstr ""
+msgstr "Hozzáférés engedélyezése a <em>samba4</em> LuCI alkalmazáshoz"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:126
 msgid "Guests only"
@@ -123,12 +127,13 @@ msgstr "Tulajdonos öröklése"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:34
 msgid "Interface"
-msgstr "Csatoló"
+msgstr "Interfész"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:35
 msgid "Listen only on the given interface or, if unspecified, on lan"
 msgstr ""
-"Figyelés csak a megadott csatolón, vagy a helyi hálózaton, ha nincs megadva"
+"Figyelés csak a megadott interfészen, vagy a helyi hálózaton, ha nincs "
+"megadva"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:98
 msgid "Name"
@@ -141,15 +146,15 @@ msgstr "Hálózati megosztások"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:62
 msgid ""
-"On lower-end devices may increase speeds, by forceing synchronous I/O "
-"instead of the default asynchronous."
+"On lower-end devices may increase speeds, by forcing synchronous I/O instead "
+"of the default asynchronous."
 msgstr ""
 "Az alsóbb kategóriás eszközökön növelheti a sebességet a szinkron I/O "
 "kényszerítésével az alapértelmezett aszinkron helyett."
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:99
 msgid "Path"
-msgstr "Útvonal"
+msgstr "Elérési út"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:94
 msgid ""
@@ -190,21 +195,3 @@ msgstr "Vfs objektumok"
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:51
 msgid "Workgroup"
 msgstr "Munkacsoport"
-
-#~ msgid ""
-#~ "Allow system users to reach their home directories via network shares"
-#~ msgstr ""
-#~ "A rendszerfelhasználók hálózati megosztáson keresztül hozzáférhetnek a "
-#~ "home könyvtárukhoz."
-
-#~ msgid "Hostname"
-#~ msgstr "Gépnév"
-
-#~ msgid "Share home-directories"
-#~ msgstr "Home könyvtárak megosztása"
-
-#~ msgid "Mask for new directories"
-#~ msgstr "Új könyvtárak maszkja"
-
-#~ msgid "Mask for new files"
-#~ msgstr "Új fájlok maszkja"

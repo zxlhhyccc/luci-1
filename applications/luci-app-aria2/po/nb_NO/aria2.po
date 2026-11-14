@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-01-08 22:54+0000\n"
-"Last-Translator: Allan Nordhøy <epost@anotheragency.no>\n"
+"PO-Revision-Date: 2025-03-14 09:11+0000\n"
+"Last-Translator: Lasse Skogland <lasse.skogland@gmail.com>\n"
 "Language-Team: Norwegian Bokmål <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationsaria2/nb_NO/>\n"
 "Language: nb_NO\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.10.1\n"
+"X-Generator: Weblate 5.11-dev\n"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:433
 msgid "<abbr title=\"Local Peer Discovery\">LPD</abbr> enabled"
@@ -62,7 +62,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:329
 msgid "CA certificate"
-msgstr ""
+msgstr "CA-sertifikat"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:334
 msgid "Certificate"
@@ -109,7 +109,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:230
 msgid "Debug"
-msgstr ""
+msgstr "Avlusing"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:559
 msgid ""
@@ -284,8 +284,8 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:625
 msgid ""
-"List of extra settings. Format: option=value, eg. <code>netrc-path=/tmp/."
-"netrc</code>."
+"List of extra settings. Format: option=value, eg. <code>netrc-path=/"
+"tmp/.netrc</code>."
 msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:49
@@ -294,7 +294,7 @@ msgstr "Laster inn"
 
 #: applications/luci-app-aria2/root/usr/share/luci/menu.d/luci-app-aria2.json:33
 msgid "Log"
-msgstr ""
+msgstr "Logg"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:58
 msgid "Log Data"
@@ -306,7 +306,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:228
 msgid "Log level"
-msgstr ""
+msgstr "Loggingsnivå"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:377
 msgid "Lowest speed limit"
@@ -608,12 +608,12 @@ msgstr ""
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:585
 msgid ""
 "Specify file allocation method. If you are using newer file systems such as "
-"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), \"falloc"
-"\" is your best choice. It allocates large(few GiB) files almost instantly, "
-"but it may not be available if your system doesn't have posix_fallocate(3) "
-"function. Don't use \"falloc\" with legacy file systems such as ext3 and "
-"FAT32 because it takes almost same time as \"prealloc\" and it blocks aria2 "
-"entirely until allocation finishes."
+"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), "
+"\"falloc\" is your best choice. It allocates large(few GiB) files almost "
+"instantly, but it may not be available if your system doesn't have "
+"posix_fallocate(3) function. Don't use \"falloc\" with legacy file systems "
+"such as ext3 and FAT32 because it takes almost same time as \"prealloc\" and "
+"it blocks aria2 entirely until allocation finishes."
 msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:505
@@ -693,11 +693,11 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:373
 msgid "Timeout"
-msgstr ""
+msgstr "Tidsavbrudd"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:260
 msgid "Token"
-msgstr ""
+msgstr "Symbol"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:486
 msgid "True"
@@ -758,7 +758,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:233
 msgid "Warn"
-msgstr ""
+msgstr "Advar"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:381
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:493
@@ -772,12 +772,12 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:594
 msgid "falloc"
-msgstr ""
+msgstr "falloc"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:592
 msgid "prealloc"
-msgstr ""
+msgstr "prealloc"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:593
 msgid "trunc"
-msgstr ""
+msgstr "trunc"

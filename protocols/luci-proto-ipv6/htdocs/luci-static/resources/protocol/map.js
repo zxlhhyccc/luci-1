@@ -17,7 +17,7 @@ return network.registerProtocol('map', {
 		return this._ubus('l3_device') || 'map-%s'.format(this.sid);
 	},
 
-	getOpkgPackage: function() {
+	getPackageName: function() {
 		return 'map-t';
 	},
 
@@ -62,7 +62,7 @@ return network.registerProtocol('map', {
 
 		o = s.taboption('general', form.Value, 'ip6prefixlen', _('IPv6 prefix length'), _('The length of the IPv6 prefix in bits'));
 		o.placeholder = '16';
-		o.datatype    = 'range(0,64)';
+		o.datatype = 'or(range(0,64),128)';
 
 		o = s.taboption('general', form.Value, 'ealen', _('EA-bits length'));
 		o.datatype = 'range(0,48)';

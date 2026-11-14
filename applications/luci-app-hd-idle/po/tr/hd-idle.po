@@ -1,5 +1,3 @@
-# Generated from applications/luci-hd-idle/luasrc/model/cbi/hd_idle.lua
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
@@ -89,30 +87,3 @@ msgstr "dakika"
 msgctxt "Abbreviation for seconds"
 msgid "seconds"
 msgstr "saniye"
-
-#~ msgctxt "Abbreviation for days"
-#~ msgid "d"
-#~ msgstr "g"
-
-#~ msgctxt "Abbreviation for hours"
-#~ msgid "h"
-#~ msgstr "sa"
-
-#~ msgctxt "Abbreviation for minutes"
-#~ msgid "min"
-#~ msgstr "dak"
-
-#~ msgctxt "Abbreviation for seconds"
-#~ msgid "s"
-#~ msgstr "sn"
-
-# Hours
-#~ msgid "h"
-#~ msgstr "s"
-
-# Minutes (not minimum)
-#~ msgid "min"
-#~ msgstr "d"
-
-#~ msgid "Enable debug"
-#~ msgstr "Hata Ayıklama"

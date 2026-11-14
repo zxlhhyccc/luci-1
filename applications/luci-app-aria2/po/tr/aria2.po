@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-06-21 21:54+0000\n"
-"Last-Translator: metezd <itoldyouthat@protonmail.com>\n"
+"PO-Revision-Date: 2026-10-13 13:19+0000\n"
+"Last-Translator: Pavel Borecki <pavelbo@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationsaria2/tr/>\n"
 "Language: tr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.13.1-dev\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:433
 msgid "<abbr title=\"Local Peer Discovery\">LPD</abbr> enabled"
@@ -176,7 +176,7 @@ msgstr "Proxy'yi etkinleştir"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:206
 msgid "Enabled"
-msgstr "Etkin"
+msgstr "Etkinleştirildi"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:234
 msgid "Error"
@@ -297,11 +297,11 @@ msgstr "Ek BitTorrent izleyicisinin ilan URI'sinin listesi."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:625
 msgid ""
-"List of extra settings. Format: option=value, eg. <code>netrc-path=/tmp/."
-"netrc</code>."
+"List of extra settings. Format: option=value, eg. <code>netrc-path=/"
+"tmp/.netrc</code>."
 msgstr ""
-"Ekstra ayarların listesi. Format: option=value, örn. <code>netrc-path=/tmp/."
-"netrc</code>."
+"Ekstra ayarların listesi. Format: option=value, örn. <code>netrc-path=/"
+"tmp/.netrc</code>."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:49
 msgid "Loading"
@@ -373,7 +373,7 @@ msgstr "Minimum bölme boyutu"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:258
 msgid "No Authentication"
-msgstr "Kimlik doğrulama yok"
+msgstr "Doğrulama Yok"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:33
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:38
@@ -382,11 +382,11 @@ msgstr "Günlük verisi yok."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:591
 msgid "None"
-msgstr "Yok"
+msgstr "Hiçbiri"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:232
 msgid "Notice"
-msgstr "Uyarı"
+msgstr "Duyuru"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:242
 msgid "Pause"
@@ -472,7 +472,7 @@ msgstr "RPC kullanıcı adı"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:62
 msgid "Refresh every %s seconds."
-msgstr "Her %s saniyede bir yenile."
+msgstr "Her %s saniyede bir yenileyin."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:459
 msgid "Remove unselected file"
@@ -665,12 +665,12 @@ msgstr "Ayarlar listesi"
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:585
 msgid ""
 "Specify file allocation method. If you are using newer file systems such as "
-"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), \"falloc"
-"\" is your best choice. It allocates large(few GiB) files almost instantly, "
-"but it may not be available if your system doesn't have posix_fallocate(3) "
-"function. Don't use \"falloc\" with legacy file systems such as ext3 and "
-"FAT32 because it takes almost same time as \"prealloc\" and it blocks aria2 "
-"entirely until allocation finishes."
+"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), "
+"\"falloc\" is your best choice. It allocates large(few GiB) files almost "
+"instantly, but it may not be available if your system doesn't have "
+"posix_fallocate(3) function. Don't use \"falloc\" with legacy file systems "
+"such as ext3 and FAT32 because it takes almost same time as \"prealloc\" and "
+"it blocks aria2 entirely until allocation finishes."
 msgstr ""
 "Dosya ayırma yöntemini belirtin. Ext4 (uzantı destekli), btrfs, xfs veya "
 "NTFS (yalnızca MinGW) gibi daha yeni dosya sistemleri kullanıyorsanız, "
@@ -781,7 +781,7 @@ msgstr "Zaman aşımı"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:260
 msgid "Token"
-msgstr "Jeton"
+msgstr "Token"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:486
 msgid "True"
@@ -807,11 +807,12 @@ msgid ""
 "PKCS12 files with a blank import password can be opened!<br/>When using PEM, "
 "you have to specify the \"RPC private key\" as well."
 msgstr ""
-"RPC sunucusu için dosya içindeki sertifikayı kullanın. Sertifika, PKCS12 (."
-"p12, .pfx) veya PEM biçiminde olmalıdır. <br/> PKCS12 dosyaları, sertifika, "
+"RPC sunucusu için dosya içindeki sertifikayı kullanın. Sertifika, PKCS12 "
+"(.p12, .pfx) veya PEM biçiminde olmalıdır.<br/>PKCS12 dosyaları, sertifika, "
 "bir anahtar ve isteğe bağlı olarak bir ek sertifika zinciri içermelidir. "
-"Yalnızca boş bir içe aktarma şifresine sahip PKCS12 dosyaları açılabilir! "
-"<br/> PEM kullanırken, \"RPC özel anahtarını\" da belirtmeniz gerekir."
+"Yalnızca boş bir içe aktarma şifresine sahip PKCS12 dosyaları "
+"açılabilir!<br/>PEM kullanırken, \"RPC özel anahtarını\" da belirtmeniz "
+"gerekir."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:335
 msgid ""
@@ -821,11 +822,11 @@ msgid ""
 "PKCS12 files with a blank import password can be opened!<br/>When using PEM, "
 "you have to specify the \"Private key\" as well."
 msgstr ""
-"Dosya içindeki istemci sertifikasını kullanın. Sertifika, PKCS12 (.p12, ."
-"pfx) veya PEM biçiminde olmalıdır. <br/> PKCS12 dosyaları, sertifika, bir "
+"Dosya içindeki istemci sertifikasını kullanın. Sertifika, PKCS12 (.p12, "
+".pfx) veya PEM biçiminde olmalıdır.<br/>PKCS12 dosyaları, sertifika, bir "
 "anahtar ve isteğe bağlı olarak bir ek sertifika zinciri içermelidir. "
-"Yalnızca boş bir içe aktarma şifresine sahip PKCS12 dosyaları açılabilir! "
-"<br/> PEM kullanırken, \"Özel anahtarı\" da belirtmeniz gerekir."
+"Yalnızca boş bir içe aktarma şifresine sahip PKCS12 dosyaları "
+"açılabilir!<br/>PEM kullanırken, \"Özel anahtarı\" da belirtmeniz gerekir."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:294
 msgid ""
@@ -861,7 +862,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:233
 msgid "Warn"
-msgstr "Uyar"
+msgstr "Uyarı"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:381
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:493
@@ -884,28 +885,3 @@ msgstr "prealloc"
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:593
 msgid "trunc"
 msgstr "trunc"
-
-#~ msgid "Empty file."
-#~ msgstr "Boş dosya."
-
-#~ msgid "Error: Can't find aria2c in PATH, please reinstall aria2."
-#~ msgstr ""
-#~ "Hata: Belirtilen yolda aria2c bulunamıyor, lütfen aria2'yi yeniden kurun."
-
-#~ msgid "Failed to load log data."
-#~ msgstr "Günlük verileri yüklenemedi."
-
-#~ msgid "File does not exist."
-#~ msgstr "Dosya bulunmuyor."
-
-#~ msgid "For more information, please visit: %s"
-#~ msgstr "Daha fazla bilgi için lütfen şu adresi ziyaret edin: %s"
-
-#~ msgid "Refresh every 10 seconds."
-#~ msgstr "Her 10 saniyede bir yenileyin."
-
-#~ msgid "Show URL"
-#~ msgstr "URL'yi göster"
-
-#~ msgid "Use WebSocket"
-#~ msgstr "WebSocket'i kullan"

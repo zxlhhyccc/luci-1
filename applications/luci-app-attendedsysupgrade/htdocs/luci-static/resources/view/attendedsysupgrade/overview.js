@@ -9,17 +9,43 @@
 'require dom';
 'require fs';
 
-var callPackagelist = rpc.declare({
+
+/* --------------------------------------------------------------------------
+ * This section should be sufficient to isolate the changes that any forked
+ * versions need to change with a custom support url.
+ */
+
+const support_url = 'https://forum.openwrt.org/t/luci-attended-sysupgrade-support-thread/230552';
+const support_link = E('a', { href: support_url }, _('this forum thread'));
+
+function detailsBlock(title, content, pre) {
+	/* Formatter for discourse-based forum "details" block.
+	 *
+	 * If the above support_url is changed to github, say, then you'd
+	 * probably need to get rid of the '[details...]' syntax.
+	 */
+	return ! content ? '' : ''.concat(
+		'[details="', title, '"]\n',
+		pre ? '```\n' : '',
+		content, '\n',
+		pre ? '```\n' : '',
+		'[/details]\n',
+	);
+}
+
+/* -------------------------------------------------------------------------- */
+
+const callPackagelist = rpc.declare({
 	object: 'rpc-sys',
 	method: 'packagelist',
 });
 
-var callSystemBoard = rpc.declare({
+const callSystemBoard = rpc.declare({
 	object: 'system',
 	method: 'board',
 });
 
-var callUpgradeStart = rpc.declare({
+const callUpgradeStart = rpc.declare({
 	object: 'rpc-sys',
 	method: 'upgrade_start',
 	params: ['keep'],
@@ -28,14 +54,14 @@ var callUpgradeStart = rpc.declare({
 /**
  * Returns the branch of a given version. This helps to offer upgrades
  * for point releases (aka within the branch).
- * 
+ *
  * Logic:
  * SNAPSHOT -> SNAPSHOT
  * 21.02-SNAPSHOT -> 21.02
  * 21.02.0-rc1 -> 21.02
  * 19.07.8 -> 19.07
- * 
- * @param {string} version 
+ *
+ * @param {string} version
  * Input version from which to determine the branch
  * @returns {string}
  * The determined branch
@@ -45,10 +71,10 @@ function get_branch(version) {
 }
 
 /**
- * The OpenWrt revision string contains both a hash as well as the number 
- * commits since the OpenWrt/LEDE reboot. It helps to determine if a 
+ * The OpenWrt revision string contains both a hash as well as the number
+ * commits since the OpenWrt/LEDE reboot. It helps to determine if a
  * snapshot is newer than another.
- * 
+ *
  * @param {string} revision
  * Revision string of a OpenWrt device
  * @returns {integer}
@@ -60,197 +86,415 @@ function get_revision_count(revision) {
 
 return view.extend({
 	steps: {
-		init: _('10% Received build request'),
-		download_imagebuilder: _('20% Downloading ImageBuilder archive'),
-		unpack_imagebuilder: _('40% Setup ImageBuilder'),
-		calculate_packages_hash: _('60% Validate package selection'),
-		building_image: _('80% Generating firmware image')
+		init:                    [  0, _('Received build request')],
+		container_setup:         [ 10, _('Setting up ImageBuilder')],
+		validate_revision:       [ 20, _('Validating revision')],
+		validate_manifest:       [ 30, _('Validating package selection')],
+		calculate_packages_hash: [ 40, _('Calculating package hash')],
+		building_image:          [ 50, _('Generating firmware image')],
+		signing_images:          [ 95, _('Signing images')],
+		done:                    [100, _('Completed generating firmware image')],
+		failed:                  [100, _('Failed to generate firmware image')],
+
+		/* Obsolete status values, retained for backward compatibility. */
+		download_imagebuilder:   [ 20, _('Downloading ImageBuilder archive')],
+		unpack_imagebuilder:     [ 40, _('Setting Up ImageBuilder')],
 	},
 
-	data: {
-		url: '',
-		revision: '',
-		advanced_mode: 0,
-	},
+	request_hash: new Map(),
+	sha256_unsigned: '',
 
-	firmware: {
-		profile: '',
-		target: '',
-		version: '',
-		packages: [],
-		diff_packages: true,
-		filesystem: '',
-	},
+	applyPackageChanges: async function(package_info) {
+		let { url, target, version, packages } = package_info;
 
-	handle200: function (response) {
-		response = response.json();
-		var image;
-		for (image of response.images) {
-			if (this.firmware.filesystem == image.filesystem) {
-				if (this.data.efi) {
-					if (image.type == 'combined-efi') {
-						break;
-					}
-				} else {
-					if (image.type == 'sysupgrade' || image.type == 'combined') {
-						break;
-					}
-				}
+		const overview_url = `${url}/api/v1/overview`;
+		const revision_url = `${url}/api/v1/revision/${version}/${target}`;
+
+		let changes, target_revision;
+
+		await Promise.all([
+			request.get(overview_url)
+				.then(response => response.json())
+				.then(json => json.branches)
+				.then(branches => branches[get_branch(version)])
+				.then(branch => { changes = branch.package_changes; })
+				.catch(error => {
+					throw Error(`Get overview failed:<br>${overview_url}<br>${error}`);
+				}),
+
+			request.get(revision_url)
+				.then(response => response.json())
+				.then(json => json.revision)
+				.then(revision => { target_revision = get_revision_count(revision); })
+				.catch(error => {
+					throw Error(`Get revision failed:<br>${revision_url}<br>${error}`);
+				}),
+		]);
+
+		for (const change of changes) {
+			let idx = packages.indexOf(change.source);
+			if (idx >= 0 && change.revision <= target_revision) {
+				if (change.target)
+					packages[idx] = change.target;
+				else
+					packages.splice(idx, 1);
 			}
 		}
+		return packages;
+	},
 
-		if (image.name != undefined) {
-			var sysupgrade_url = `${this.data.url}/store/${response.bin_dir}/${image.name}`;
+	selectImage: function (images, data, firmware) {
+		var filesystemFilter = function(e) {
+			return (e.filesystem == firmware.filesystem);
+		}
+		var typeFilter = function(e) {
+			let efi_targets = ['armsr', 'loongarch', 'x86'];
+			let efi_capable = efi_targets.some((tgt) => firmware.target.startsWith(tgt));
+			if (efi_capable) {
+				if (data.efi) {
+					return (e.type == 'combined-efi');
+				} else {
+					return (e.type == 'combined');
+				}
+			} else {
+				return (e.type == 'sysupgrade' || e.type == 'combined');
+			}
+		}
+		let candidates = images.filter(filesystemFilter);
+		let image = candidates.filter(typeFilter)[0];
 
-			var keep = E('input', { type: 'checkbox' });
+		if (!image) {
+			/* Some devices ship a single image used for both factory
+			 * install and sysupgrade under a device specific type, e.g.
+			 * 'trx' on bcm53xx. Like owut, fall back to the remaining
+			 * non-factory type if it is unambiguous. */
+			let remaining = candidates.filter((e) => !e.type.includes('factory'));
+			if (remaining.length && remaining.every((e) => e.type == remaining[0].type))
+				image = remaining[0];
+		}
+
+		return image;
+	},
+
+	handle200: function (response, content, data, firmware) {
+		response = response.json();
+		let image = this.selectImage(response.images, data, firmware);
+
+		if (image) {
+			this.sha256_unsigned = image.sha256_unsigned;
+			let sysupgrade_url = `${data.url}/store/${response.bin_dir}/${image.name}`;
+
+			let keep = E('input', { type: 'checkbox' });
 			keep.checked = true;
 
-			var fields = [
-				_('Version'), `${response.version_number} ${response.version_code}`,
-				_('SHA256'), image.sha256,
+			let fields = [
+				_('Version'),
+				`${response.version_number} ${response.version_code}`,
+				_('SHA256'),
+				image.sha256,
 			];
 
-			if (this.data.advanced_mode == 1) {
+			if (data.advanced_mode == 1) {
 				fields.push(
-					_('Profile'), response.id,
-					_('Target'), response.target,
-					_('Build Date'), response.build_at,
-					_('Filename'), image.name,
-					_('Filesystem'), image.filesystem,
-				)
+					_('Profile'),
+					response.id,
+					_('Target'),
+					response.target,
+					_('Build Date'),
+					response.build_at,
+					_('Filename'),
+					image.name,
+					_('Filesystem'),
+					image.filesystem
+				);
 			}
 
-			fields.push('', E('a', { href: sysupgrade_url }, _('Download firmware image')))
-
-			var table = E('div', { class: 'table' });
-
-			for (var i = 0; i < fields.length; i += 2) {
-				table.appendChild(E('tr', { class: 'tr' }, [
-					E('td', { class: 'td left', width: '33%' }, [fields[i]]),
-					E('td', { class: 'td left' }, [fields[i + 1]]),
-				]));
+			fields.push(
+				'',
+				E('a', { href: sysupgrade_url }, _('Download firmware image'))
+			);
+			if (data.rebuilder) {
+				fields.push(_('Rebuilds'), E('div', { id: 'rebuilder_status' }));
 			}
 
-			var modal_body = [
+			let table = E('div', { class: 'table' });
+
+			for (let i = 0; i < fields.length; i += 2) {
+				table.appendChild(
+					E('tr', { class: 'tr' }, [
+						E('td', { class: 'td left', width: '33%' }, [fields[i]]),
+						E('td', { class: 'td left' }, [fields[i + 1]]),
+					])
+				);
+			}
+
+			let modal_body = [
 				table,
-				E('p', { class: 'mt-2' },
+				E(
+					'p',
+					{ class: 'mt-2' },
 					E('label', { class: 'btn' }, [
-						keep, ' ',
-						_('Keep settings and retain the current configuration')
-					])),
+						keep,
+						' ',
+						_('Keep settings and retain the current configuration'),
+					])
+				),
 				E('div', { class: 'right' }, [
-					E('div', { class: 'btn', click: ui.hideModal }, _('Cancel')), ' ',
-					E('button', {
-						'class': 'btn cbi-button cbi-button-positive important',
-						'click': ui.createHandlerFn(this, function () {
-							this.handleInstall(sysupgrade_url, keep.checked, image.sha256)
-						})
-					}, _('Install firmware image')),
+					E('div', { class: 'btn', click: ui.hideModal }, _('Cancel')),
+					' ',
+					E(
+						'button',
+						{
+							class: 'btn cbi-button cbi-button-positive important',
+							click: ui.createHandlerFn(this, function () {
+								this.handleInstall(sysupgrade_url, keep.checked, image.sha256);
+							}),
+						},
+						_('Install firmware image')
+					),
 				]),
 			];
 
 			ui.showModal(_('Successfully created firmware image'), modal_body);
+			if (data.rebuilder) {
+				this.handleRebuilder(content, data, firmware);
+			}
+		} else {
+			ui.showModal(_('No sysupgrade image found'), [
+				E('p', _('The image builder did not return a usable sysupgrade image for this device (image types: %s).').format(
+					response.images.map((i) => i.type).join(', '))),
+				E('p', [
+					_('Please report this in'), ' ',
+					support_link, '.',
+				]),
+				E('div', { class: 'right' }, [
+					E('div', { class: 'btn', click: ui.hideModal }, _('Close')),
+				]),
+			]);
 		}
 	},
 
 	handle202: function (response) {
-		response = response.json();
-		this.data.request_hash = response.request_hash;
-
 		if ('queue_position' in response) {
 			ui.showModal(_('Queued...'), [
-				E('p', { 'class': 'spinning' }, _('Request in build queue position %s').format(response.queue_position))
+				E(
+					'p',
+					{ class: 'spinning' },
+					_('Request in build queue position %s').format(
+						response.queue_position
+					)
+				),
 			]);
 		} else {
 			ui.showModal(_('Building Firmware...'), [
-				E('p', { 'class': 'spinning' }, _('Progress: %s').format(this.steps[response.imagebuilder_status]))
+				E(
+					'p',
+					{ class: 'spinning' },
+					_('Progress: %s%% %s').format(
+						this.steps[response.imagebuilder_status][0],
+						this.steps[response.imagebuilder_status][1]
+					)
+				),
 			]);
 		}
 	},
 
-	handleError: function (response) {
+	handleError: function (response, data, firmware, request_hash) {
 		response = response.json();
-		var body = [
-			E('p', {}, _('Server response: %s').format(response.detail)),
-			E('a', { href: 'https://github.com/openwrt/asu/issues' }, _('Please report the error message and request')),
-			E('p', {}, _('Request Data:')),
-			E('pre', {}, JSON.stringify({ ...this.data, ...this.firmware }, null, 4)),
+		const request_data = {
+			...data,
+			request_hash: request_hash,
+			sha256_unsigned: this.sha256_unsigned,
+			...firmware
+		};
+		const request_str = JSON.stringify(request_data, null, 4);
+		if (typeof response.detail != "string") {
+			response.detail = JSON.stringify(response.detail, null, 4);
+		}
+		let body = [
+			E('p', {}, [
+				_('First, check'), ' ',
+				support_link,
+				_('.  If you don\'t find a solution there, then report all of the information below.')
+			]),
+
+			E(
+				'button',
+				{
+					class: 'btn cbi-button cbi-button-positive important',
+					style: 'margin-bottom: 1em; padding: 0.2em',
+					click: ui.createHandlerFn(this, function () {
+						var text = ''.concat(
+							// No translations in here as it's intended for the forum.
+							'Server response: %s\n\n'.format(response.detail),
+							detailsBlock('Request Data', request_str, true),
+							detailsBlock('STDOUT', response.stdout, true),
+							detailsBlock('STDERR', response.stderr, true),
+						);
+
+						navigator.clipboard.writeText(text);
+
+						ui.showModal(_('Data copied!'), [
+							E('p', [
+								_('Paste the contents of the clipboard to'), ' ',
+								support_link,
+								'.',
+							]),
+							E('div', { class: 'right' }, [
+								E('div', { class: 'btn', click: ui.hideModal }, _('Close')),
+							]),
+						]);
+					}),
+				},
+				_('Copy error data to clipboard...')
+			),
+
+			E('p', _('Server response: %s').format(response.detail)),
+			E('p', _('Request Data:')),
+			E('pre', {}, request_str),
 		];
 
 		if (response.stdout) {
-			body.push(E('b', {}, 'STDOUT:'));
-			body.push(E('pre', {}, response.stdout));
+			body.push(
+				E('b', 'STDOUT:'),
+				E('pre', response.stdout),
+			);
 		}
 
 		if (response.stderr) {
-			body.push(E('b', {}, 'STDERR:'));
-			body.push(E('pre', {}, response.stderr));
+			body.push(
+				E('b', 'STDERR:'),
+				E('pre', response.stderr),
+			);
 		}
 
-		body = body.concat([
+		body.push(
 			E('div', { class: 'right' }, [
 				E('div', { class: 'btn', click: ui.hideModal }, _('Close')),
 			]),
-		]);
+		);
 
 		ui.showModal(_('Error building the firmware image'), body);
 	},
 
-	handleRequest: function () {
-		var request_url = `${this.data.url}/api/v1/build`;
-		var method = "POST"
-		var content = this.firmware;
+	handleRequest: function (server, main, content, data, firmware) {
+		let request_url = `${server}/api/v1/build`;
+		let method = 'POST';
+		let local_content = content;
+		const request_hash = this.request_hash.get(server);
 
 		/**
-		 * If `request_hash` is available use a GET request instead of 
+		 * If `request_hash` is available use a GET request instead of
 		 * sending the entire object.
 		 */
-		if (this.data.request_hash) {
-			request_url += `/${this.data.request_hash}`;
-			content = {};
-			method = "GET"
+		if (request_hash) {
+			request_url += `/${request_hash}`;
+			local_content = {};
+			method = 'GET';
 		}
 
-		request.request(request_url, { method: method, content: content })
+		request
+			.request(request_url, { method: method, content: local_content })
 			.then((response) => {
 				switch (response.status) {
 					case 202:
-						this.handle202(response);
+						response = response.json();
+
+						this.request_hash.set(server, response.request_hash);
+
+						if (main) {
+							this.handle202(response);
+						} else {
+							let view = document.getElementById(server);
+							view.innerText = `⏳	(${
+								this.steps[response.imagebuilder_status][0]
+							}%) ${server}`;
+						}
 						break;
 					case 200:
-						poll.stop();
-						this.handle200(response);
+						if (main == true) {
+							poll.remove(this.pollFn);
+							this.handle200(response, content, data, firmware);
+						} else {
+							poll.remove(this.rebuilder_polls[server]);
+							response = response.json();
+							let view = document.getElementById(server);
+							let image = this.selectImage(response.images, data, firmware);
+							if (!image) {
+								view.innerText = '⚠️ %s'.format(server);
+							} else if (image.sha256_unsigned == this.sha256_unsigned) {
+								view.innerText = '✅ %s'.format(server);
+							} else {
+								view.innerHTML = `⚠️ ${server} (<a href="${server}/store/${
+									response.bin_dir
+								}/${image.name}">${_('Download')}</a>)`;
+							}
+						}
 						break;
-					case 400: // bad request
-					case 422: // bad package
-					case 500: // build failed
-						poll.stop();
-						this.handleError(response);
+					default:  // any error or unexpected responses
+						if (main == true) {
+							poll.remove(this.pollFn);
+							this.handleError(response, data, firmware, request_hash);
+						} else {
+							poll.remove(this.rebuilder_polls[server]);
+							document.getElementById(server).innerText = '🚫 %s'.format(
+								server
+							);
+						}
 						break;
 				}
 			});
 	},
 
+	handleRebuilder: function (content, data, firmware) {
+		this.rebuilder_polls = {};
+		for (let rebuilder of data.rebuilder) {
+			this.rebuilder_polls[rebuilder] = L.bind(
+				this.handleRequest,
+				this,
+				rebuilder,
+				false,
+				content,
+				data,
+				firmware
+			);
+			poll.add(this.rebuilder_polls[rebuilder], 5);
+			document.getElementById(
+				'rebuilder_status'
+			).innerHTML += `<p id="${rebuilder}">⏳ ${rebuilder}</p>`;
+		}
+		poll.start();
+	},
+
 	handleInstall: function (url, keep, sha256) {
 		ui.showModal(_('Downloading...'), [
-			E('p', { 'class': 'spinning' }, _('Downloading firmware from server to browser'))
+			E(
+				'p',
+				{ class: 'spinning' },
+				_('Downloading firmware from server to browser')
+			),
 		]);
 
-		request.get(url, {
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-			},
-			responseType: 'blob',
-		})
+		request
+			.get(url, {
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
+				responseType: 'blob',
+			})
 			.then((response) => {
-				var form_data = new FormData();
+				let form_data = new FormData();
 				form_data.append('sessionid', rpc.getSessionID());
 				form_data.append('filename', '/tmp/firmware.bin');
-				form_data.append('filemode', 600);
+				form_data.append('filemode', 0o600);
 				form_data.append('filedata', response.blob());
 
 				ui.showModal(_('Uploading...'), [
-					E('p', { 'class': 'spinning' }, _('Uploading firmware from browser to device'))
+					E(
+						'p',
+						{ class: 'spinning' },
+						_('Uploading firmware from browser to device')
+					),
 				]);
 
 				request
@@ -261,190 +505,284 @@ return view.extend({
 					.then((response) => response.json())
 					.then((response) => {
 						if (response.sha256sum != sha256) {
-
 							ui.showModal(_('Wrong checksum'), [
 								E('p', _('Error during download of firmware. Please try again')),
-								E('div', { class: 'btn', click: ui.hideModal }, _('Close'))
+								E('div', { class: 'btn', click: ui.hideModal }, _('Close')),
 							]);
 						} else {
 							ui.showModal(_('Installing...'), [
-								E('p', { class: 'spinning' }, _('Installing the sysupgrade. Do not unpower device!'))
+								E('div', { class: 'spinning' }, [
+									E('p', _('Installing the sysupgrade image...')),
+									E('p',
+									_('Once the image is written, the system will reboot.')
+									+ ' ' +
+									_('This should take at least a minute, so please wait for the login screen.')
+									),
+									E('b', _('While you are waiting, do not unpower device!')),
+								]),
 							]);
 
-							L.resolveDefault(callUpgradeStart(keep), {})
-								.then((response) => {
-									if (keep) {
-										ui.awaitReconnect(window.location.host);
-									} else {
-										ui.awaitReconnect('192.168.1.1', 'openwrt.lan');
-									}
-								});
+							L.resolveDefault(callUpgradeStart(keep), {}).then((response) => {
+								// Wait 10 seconds before we try to reconnect...
+								let hosts = keep ? [] : ['192.168.1.1', 'openwrt.lan'];
+								setTimeout(() => { ui.awaitReconnect(...hosts); }, 10000);
+							});
 						}
 					});
 			});
 	},
 
-	handleCheck: function () {
-		var { url, revision } = this.data
-		var { version, target } = this.firmware
-		var candidates = [];
-		var response;
-		var request_url = `${url}/api/overview`;
-		if (version.endsWith('SNAPSHOT')) {
-			request_url = `${url}/api/v1/revision/${version}/${target}`;
-		}
+	handleCheck: function (data, firmware) {
+		this.request_hash.clear();
+		let { url, revision, advanced_mode, branch } = data;
+		let { version, target, profile, packages } = firmware;
+		let candidates = [];
+
+		const endpoint = version.endsWith('SNAPSHOT') ? `revision/${version}/${target}` : 'overview';
+		const request_url = `${url}/api/v1/${endpoint}`;
 
 		ui.showModal(_('Searching...'), [
-			E('p', { 'class': 'spinning' },
-				_('Searching for an available sysupgrade of %s - %s').format(version, revision))
+			E(
+				'p',
+				{ class: 'spinning' },
+				_('Searching for an available sysupgrade of %s - %s').format(
+					version,
+					revision
+				)
+			),
 		]);
 
-		L.resolveDefault(request.get(request_url))
-			.then(response => {
-				if (!response.ok) {
-					ui.showModal(_('Error connecting to upgrade server'), [
-						E('p', {}, _('Could not reach API at "%s". Please try again later.').format(response.url)),
-						E('pre', {}, response.responseText),
+		L.resolveDefault(request.get(request_url)).then((response) => {
+			if (!response.ok) {
+				ui.showModal(_('Error connecting to upgrade server'), [
+					E(
+						'p',
+						{},
+						_('Could not reach API at "%s". Please try again later.').format(
+							response.url
+						)
+					),
+					E('pre', {}, response.responseText),
+					E('div', { class: 'right' }, [
+						E('div', { class: 'btn', click: ui.hideModal }, _('Close')),
+					]),
+				]);
+				return;
+			}
+			if (version.endsWith('SNAPSHOT')) {
+				const remote_revision = response.json().revision;
+				if (
+					get_revision_count(revision) < get_revision_count(remote_revision)
+				) {
+					candidates.push([version, remote_revision]);
+				}
+			} else {
+				const latest = response.json().latest;
+
+				// ensure order: newest to oldest release
+				latest.sort().reverse();
+
+				for (let remote_version of latest) {
+					let remote_branch = get_branch(remote_version);
+
+					// already latest version installed
+					if (version == remote_version) {
+						break;
+					}
+
+					candidates.unshift([remote_version, null]);
+
+					// don't offer branches older than the current
+					if (branch == remote_branch) {
+						break;
+					}
+				}
+			}
+
+			// allow to re-install running firmware in advanced mode
+			if (advanced_mode == 1) {
+				candidates.unshift([version, revision]);
+			}
+
+			if (candidates.length) {
+				let s, o;
+
+				let mapdata = {
+					request: {
+						profile,
+						version: candidates[0][0],
+						packages: Object.keys(packages).sort(),
+					},
+				};
+
+				let map = new form.JSONMap(mapdata, '');
+
+				s = map.section(
+					form.NamedSection,
+					'request',
+					'',
+					'',
+					_('Use defaults for the safest update')
+				);
+				o = s.option(form.ListValue, 'version', _('Select firmware version'));
+				for (let candidate of candidates) {
+					if (candidate[0] == version && candidate[1] == revision) {
+						o.value(
+							candidate[0],
+							_('[installed] %s').format(
+								candidate[1]
+									? `${candidate[0]} - ${candidate[1]}`
+									: candidate[0]
+							)
+						);
+					} else {
+						o.value(
+							candidate[0],
+							candidate[1] ? `${candidate[0]} - ${candidate[1]}` : candidate[0]
+						);
+					}
+				}
+
+				if (advanced_mode == 1) {
+					o = s.option(form.Value, 'profile', _('Board Name / Profile'));
+					o = s.option(form.DynamicList, 'packages', _('Packages'));
+				}
+
+				L.resolveDefault(map.render()).then((form_rendered) => {
+					ui.showModal(_('New firmware upgrade available'), [
+						E(
+							'p',
+							_('Currently running: %s - %s').format(
+								version,
+								revision
+							)
+						),
+						form_rendered,
 						E('div', { class: 'right' }, [
-							E('div', { class: 'btn', click: ui.hideModal }, _('Close'))
-						]),
-					]);
-					return;
-				}
-				if (version.endsWith('SNAPSHOT')) {
-					const remote_revision = response.json().revision;
-					if (get_revision_count(revision) < get_revision_count(remote_revision)) {
-						candidates.push([version, remote_revision]);
-					}
-				} else {
-					const latest = response.json().latest;
-
-					for (let remote_version of latest) {
-						var remote_branch = get_branch(remote_version);
-
-						// already latest version installed
-						if (version == remote_version) {
-							break;
-						}
-
-						// skip branch upgrades outside the advanced mode
-						if (this.data.branch != remote_branch && this.data.advanced_mode == 0) {
-							continue;
-						}
-
-						candidates.unshift([remote_version, null]);
-
-						// don't offer branches older than the current
-						if (this.data.branch == remote_branch) {
-							break;
-						}
-					}
-				}
-
-				// allow to re-install running firmware in advanced mode
-				if (this.data.advanced_mode == 1) {
-					candidates.unshift([version, revision])
-				}
-
-				if (candidates.length) {
-					var m, s, o;
-
-					var mapdata = {
-						request: {
-							profile: this.firmware.profile,
-							version: candidates[0][0],
-							packages: Object.keys(this.firmware.packages).sort(),
-						},
-					};
-
-					var map = new form.JSONMap(mapdata, '');
-
-					s = map.section(form.NamedSection, 'request', '', '', 'Use defaults for the safest update');
-					o = s.option(form.ListValue, 'version', 'Select firmware version');
-					for (let candidate of candidates) {
-						if (candidate[0] == version && candidate[1] == revision) {
-							o.value(candidate[0], _('[installed] %s')
-								.format(candidate[1] ? `${candidate[0]} - ${candidate[1]}` : candidate[0]));
-						} else {
-							o.value(candidate[0], candidate[1] ? `${candidate[0]} - ${candidate[1]}` : candidate[0]);
-						}
-					}
-
-					if (this.data.advanced_mode == 1) {
-						o = s.option(form.Value, 'profile', _('Board Name / Profile'));
-						o = s.option(form.DynamicList, 'packages', _('Packages'));
-					}
-
-					L.resolveDefault(map.render()).
-						then(form_rendered => {
-							ui.showModal(_('New firmware upgrade available'), [
-								E('p', _('Currently running: %s - %s').format(this.firmware.version, this.data.revision)),
-								form_rendered,
-								E('div', { class: 'right' }, [
-									E('div', { class: 'btn', click: ui.hideModal }, _('Cancel')), ' ',
-									E('button', {
-										'class': 'btn cbi-button cbi-button-positive important',
-										'click': ui.createHandlerFn(this, function () {
-											map.save().then(() => {
-												this.firmware.packages = mapdata.request.packages;
-												this.firmware.version = mapdata.request.version;
-												this.firmware.profile = mapdata.request.profile;
-												poll.add(L.bind(this.handleRequest, this), 5);
+							E('div', { class: 'btn', click: ui.hideModal }, _('Cancel')),
+							' ',
+							E(
+								'button',
+								{
+									class: 'btn cbi-button cbi-button-positive important',
+									click: ui.createHandlerFn(this, function () {
+										map.save().then(() => {
+											this.applyPackageChanges({
+												url,
+												target,
+												version:  mapdata.request.version,
+												packages: mapdata.request.packages,
+											}).then((packages) => {
+												const content = {
+													...firmware,
+													packages: packages,
+													version: mapdata.request.version,
+													profile: mapdata.request.profile
+												};
+												this.pollFn = L.bind(function () {
+													this.handleRequest(url, true, content, data, firmware);
+												}, this);
+												poll.add(this.pollFn, 5);
+												poll.start();
+											})
+											.catch(error => {
+											    ui.addNotification(null, E('p', error.message));
+											    ui.hideModal();
 											});
-										})
-									}, _('Request firmware image')),
-								]),
-							]);
-						});
-				} else {
-					ui.showModal(_('No upgrade available'), [
-						E('p', _('The device runs the latest firmware version %s - %s').format(version, revision)),
-						E('div', { class: 'right' }, [
-							E('div', { class: 'btn', click: ui.hideModal }, _('Close')),
+										});
+									}),
+								},
+								_('Request firmware image')
+							),
 						]),
 					]);
-				}
-
-			});
+				});
+			} else {
+				ui.showModal(_('No upgrade available'), [
+					E(
+						'p',
+						_('The device runs the latest firmware version %s - %s').format(
+							version,
+							revision
+						)
+					),
+					E('div', { class: 'right' }, [
+						E('div', { class: 'btn', click: ui.hideModal }, _('Close')),
+					]),
+				]);
+			}
+		});
 	},
 
-	load: function () {
-		return Promise.all([
+	load: async function () {
+		const promises = await Promise.all([
 			L.resolveDefault(callPackagelist(), {}),
 			L.resolveDefault(callSystemBoard(), {}),
-			L.resolveDefault(fs.stat("/sys/firmware/efi"), null),
+			L.resolveDefault(fs.stat('/sys/firmware/efi'), null),
 			uci.load('attendedsysupgrade'),
 		]);
+		const data = {
+			system_board: promises[1],
+			advanced_mode: uci.get_first('attendedsysupgrade', 'client', 'advanced_mode') || 0,
+			url: uci.get_first('attendedsysupgrade', 'server', 'url').replace(/\/+$/, ''),
+			branch: get_branch(promises[1].release.version),
+			revision: promises[1].release.revision,
+			efi: promises[2] != null,
+			rebuilder: uci.get_first('attendedsysupgrade', 'server', 'rebuilder'),
+		};
+		const firmware = {
+			client: 'luci/' + promises[0].packages['luci-app-attendedsysupgrade'],
+			packages: promises[0].packages,
+			profile: promises[1].board_name,
+			target: promises[1].release.target,
+			version: promises[1].release.version,
+			diff_packages: true,
+			filesystem: promises[1].rootfs_type,
+
+			// If the user has changed the rootfs partition size via owut,
+			// then make sure to keep new image the same size.  A null value
+			// is interpreted by the ASU server as "default".
+			rootfs_size_mb: uci.get('attendedsysupgrade', 'owut', 'rootfs_size'),
+		};
+		return [data, firmware];
 	},
 
 	render: function (response) {
-		this.firmware.client = 'luci/' + response[0].packages['luci-app-attendedsysupgrade'];
-		this.firmware.packages = response[0].packages;
-
-		this.firmware.profile = response[1].board_name;
-		this.firmware.target = response[1].release.target;
-		this.firmware.version = response[1].release.version;
-		this.data.branch = get_branch(response[1].release.version);
-		this.firmware.filesystem = response[1].rootfs_type;
-		this.data.revision = response[1].release.revision;
-
-		this.data.efi = response[2];
-
-		this.data.url = uci.get_first('attendedsysupgrade', 'server', 'url');
-		this.data.advanced_mode = uci.get_first('attendedsysupgrade', 'client', 'advanced_mode') || 0
+		const data = response[0];
+		const firmware = response[1];
 
 		return E('p', [
 			E('h2', _('Attended Sysupgrade')),
-			E('p', _('The attended sysupgrade service allows to easily upgrade vanilla and custom firmware images.')),
-			E('p', _('This is done by building a new firmware on demand via an online service.')),
-			E('p', _('Currently running: %s - %s').format(this.firmware.version, this.data.revision)),
-			E('button', {
-				'class': 'btn cbi-button cbi-button-positive important',
-				'click': ui.createHandlerFn(this, this.handleCheck)
-			}, _('Search for firmware upgrade'))
+			E(
+				'p',
+				_(
+					'The attended sysupgrade service allows to upgrade vanilla and custom firmware images easily.'
+				)
+			),
+			E(
+				'p',
+				_(
+					'This is done by building a new firmware on demand via an online service.'
+				)
+			),
+			E(
+				'p',
+				_('Currently running: %s - %s').format(
+					firmware.version,
+					data.revision
+				)
+			),
+			E(
+				'button',
+				{
+					class: 'btn cbi-button cbi-button-positive important',
+					click: ui.createHandlerFn(this, this.handleCheck, data, firmware),
+				},
+				_('Search for firmware upgrade')
+			),
 		]);
 	},
 	handleSaveApply: null,
 	handleSave: null,
-	handleReset: null
+	handleReset: null,
 });

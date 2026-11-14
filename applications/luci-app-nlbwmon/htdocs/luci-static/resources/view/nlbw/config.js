@@ -47,7 +47,7 @@ return view.extend({
 	},
 
 	render: function() {
-		var m, s, o;
+		let m, s, o;
 
 		m = new form.Map('nlbwmon', _('Netlink Bandwidth Monitor - Configuration'),
 			_('The Netlink Bandwidth Monitor (nlbwmon) is a lightweight, efficient traffic accounting program keeping track of bandwidth usage per host and protocol.'));
@@ -102,6 +102,9 @@ return view.extend({
 
 			return m ? m[1] : null;
 		};
+		o.validate = function(section_id, value) {
+			return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.exec(value) ? true : _('Require a valid date in the form "YYYY-MM-DD"');
+		};
 		o.write = writePeriod;
 		o.depends('_period', 'absolute');
 
@@ -147,6 +150,7 @@ return view.extend({
 
 		o = s.taboption('advanced', form.Flag, 'database_compress', _('Compress database'),
 			_('Whether to gzip compress archive databases. Compressing the database files makes accessing old data slightly slower but helps to reduce storage requirements.'));
+		o.default = o.enabled;
 
 		o = s.taboption('advanced', form.Value, 'database_generations', _('Stored periods'),
 			_('Maximum number of accounting periods to keep, use zero to keep databases forever.'));

@@ -13,7 +13,7 @@ return network.registerProtocol('xfrm', {
 		return this._ubus('l3_device') || this.sid;
 	},
 
-	getOpkgPackage: function() {
+	getPackageName: function() {
 		return 'xfrm';
 	},
 
@@ -25,7 +25,7 @@ return network.registerProtocol('xfrm', {
 		return true;
 	},
 
-	getDevice: function() {
+	getDevices: function() {
 		return null;
 	},
 
@@ -37,9 +37,10 @@ return network.registerProtocol('xfrm', {
 		var o, ss;
 
 		o = s.taboption('general', form.Value, 'ifid', _('Interface ID'), _('Required. XFRM interface ID to be used for SA.'));
-		o.datatype = 'integer';
+		o.datatype = 'range(1,4294967295)';
+		o.rmempty = false;
 
-		o = s.taboption('general', widgets.NetworkSelect, 'tunlink', _('Required. Underlying interface.'));
+		o = s.taboption('general', widgets.NetworkSelect, 'tunlink', _('Underlying interface'),_('Optional. Bind to a specific interface.'));
 		o.exclude = s.section;
 		o.nocreate = true;
 

@@ -29,13 +29,13 @@
 	--background-color-medium-hsl:
 		var(--background-color-h),
 		var(--background-color-s),
-		calc(var(--background-color-l) + var(--background-color-delta-l-sign) * calc(6 / 255 * 100%));
+		calc(var(--background-color-l) + var(--background-color-delta-l-sign) * 2.35%);
 	--background-color-medium: hsl(var(--background-color-medium-hsl));
 
 	--background-color-low-hsl:
 		var(--background-color-h),
 		var(--background-color-s),
-		calc(var(--background-color-l) + var(--background-color-delta-l-sign) * calc(10 / 255 * 100%));
+		calc(var(--background-color-l) + var(--background-color-delta-l-sign) * 3.92%);
 	--background-color-low: hsl(var(--background-color-low-hsl));
 
 	--text-color-delta-l-sign: 1;
@@ -52,19 +52,19 @@
 	--text-color-high-hsl:
 		var(--text-color-h),
 		var(--text-color-s),
-		calc(var(--text-color-l) + var(--text-color-delta-l-sign) * calc(64 / 255 * 100%));
+		calc(var(--text-color-l) + var(--text-color-delta-l-sign) * 25.1%);
 	--text-color-high: hsl(var(--text-color-high-hsl));
 
 	--text-color-medium-hsl:
 		var(--text-color-h),
 		var(--text-color-s),
-		calc(var(--text-color-l) + var(--text-color-delta-l-sign) * calc(128 / 255 * 100%));
+		calc(var(--text-color-l) + var(--text-color-delta-l-sign) * 50.2%);
 	--text-color-medium: hsl(var(--text-color-medium-hsl));
 
 	--text-color-low-hsl:
 		var(--text-color-h),
 		var(--text-color-s),
-		calc(var(--text-color-l) + var(--text-color-delta-l-sign) * calc(191 / 255 * 100%));
+		calc(var(--text-color-l) + var(--text-color-delta-l-sign) * 74.9%);
 	--text-color-low: hsl(var(--text-color-low-hsl));
 
 	--border-color-delta-l-sign: -1;
@@ -75,19 +75,19 @@
 	--border-color-high-hsl:
 		var(--border-color-h),
 		var(--border-color-s),
-		calc(var(--border-color-l) + var(--border-color-delta-l-sign) * calc(51 / 255 * 100%));
+		calc(var(--border-color-l) + var(--border-color-delta-l-sign) * 20%);
 	--border-color-high: hsl(var(--border-color-high-hsl));
 
 	--border-color-medium-hsl:
 		var(--border-color-h),
 		var(--border-color-s),
-		calc(var(--border-color-l) + var(--border-color-delta-l-sign) * calc(34 / 255 * 100%));
+		calc(var(--border-color-l) + var(--border-color-delta-l-sign) * 13.33%);
 	--border-color-medium: hsl(var(--border-color-medium-hsl));
 
 	--border-color-low-hsl:
 		var(--border-color-h),
 		var(--border-color-s),
-		calc(var(--border-color-l) + var(--border-color-delta-l-sign) * calc(17 / 255 * 100%));
+		calc(var(--border-color-l) + var(--border-color-delta-l-sign) * 6.67%);
 	--border-color-low: hsl(var(--border-color-low-hsl));
 
 	--primary-color-high: #1976d2;
@@ -115,13 +115,16 @@
 	--disabled-opacity: .7;
 
 	color-scheme: light;
+
+	--font-sans: Helvetica Neue, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+	--font-mono: Monaco, Andale Mono, Courier New, ui-monospace, monospace;
 }
 
 :root[data-darkmode="true"] {
 	--background-color-delta-l-sign: 1;
 	--background-color-h: 0;
 	--background-color-s: 0%;
-	--background-color-l: calc(34 / 255 * 100%);
+	--background-color-l: 13.33%;
 	--text-color-delta-l-sign: -1;
 	--text-color-h: 0;
 	--text-color-s: 0%;
@@ -155,6 +158,10 @@
  * ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */
 
 * {
+	scroll-margin-top: 40px;
+}
+
+*, *::before, *::after {
 	margin: 0;
 	padding: 0;
 	border: 0;
@@ -178,8 +185,6 @@ ol, ul {
 
 html {
 	font-size: 100%;
-	-webkit-text-size-adjust: 100%;
-	-ms-text-size-adjust: 100%;
 	height: 100%;
 }
 
@@ -222,17 +227,13 @@ textarea {
 	line-height: 2em;
 }
 
-button::-moz-focus-inner, input::-moz-focus-inner {
-	border: 0;
-	padding: 0;
-}
-
 button,
 input[type="button"],
 input[type="reset"],
 input[type="submit"] {
 	cursor: pointer;
-	-webkit-appearance: button;
+	-webkit-appearance: button; /* nonstandard, should remove in future */
+	appearance: button;
 	word-break: break-all;
 }
 
@@ -244,17 +245,20 @@ input[type="submit"][disabled] {
 }
 
 input[type="search"] {
-	-webkit-appearance: textfield;
+	-webkit-appearance: textfield; /* nonstandard, should remove in future */
+	appearance: textfield;
 	box-sizing: content-box;
 }
 
 input[type="search"]::-webkit-search-decoration {
-	-webkit-appearance: none;
+	-webkit-appearance: none; /* nonstandard, should remove in future */
+	appearance: none;
 }
 
 textarea {
 	overflow: auto;
 	vertical-align: top;
+	font-family: monospace;
 }
 
 .control-group {
@@ -275,7 +279,7 @@ textarea {
  * ------------------------------------------------------------------------------------------- */
 body {
 	background-color: var(--background-color-high);
-	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-family: var(--font-sans);
 	font-size: 13px;
 	font-weight: normal;
 	line-height: 18px;
@@ -284,11 +288,12 @@ body {
 	min-height: 100%;
 	display: flex;
 	flex-direction: column;
+	overflow-y: scroll;
 }
 
 .container {
 	width: 100%;
-	max-width: 940px;
+	max-width: 1180px;
 	margin-left: auto;
 	margin-right: auto;
 	zoom: 1;
@@ -314,7 +319,9 @@ a:hover {
 	float: left;
 }
 
-.nowrap {
+.nowrap:not(span) {
+/*	Sometimes you need to wrap: badges on narrow screens look weird 
+	and nowrap defeats other width constraints, so exclude span */
 	white-space: nowrap;
 }
 
@@ -479,7 +486,7 @@ address {
 
 code, pre {
 	padding: 0 3px 2px;
-	font-family: Monaco, Andale Mono, Courier New, monospace;
+	font-family: var(--font-mono);
 	font-size: 12px;
 	border-radius: 3px;
 }
@@ -530,9 +537,8 @@ fieldset legend {
 label,
 input,
 button,
-select,
-textarea {
-	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+select {
+	font-family: var(--font-sans);
 	font-size: 13px;
 	font-weight: normal;
 	line-height: normal;
@@ -542,6 +548,7 @@ textarea {
 	display: flex;
 	flex-wrap: wrap;
 	margin-bottom: 18px;
+	align-items: baseline;
 }
 
 .cbi-value-field {
@@ -589,6 +596,12 @@ select,
 	border-radius: 3px;
 }
 
+@media screen and (min-width: 768px) {
+	#localtime {
+		width: 300px;
+	}
+}
+
 input,
 select,
 .cbi-select,
@@ -619,9 +632,11 @@ select,
 	border-radius: 3px;
 	color: var(--text-color-high);
 	position: relative;
-	pointer-events: none;
+	pointer-events: auto; /* needed for drag-and-drop in UIDynamicList */
 	overflow: hidden;
 	word-break: break-all;
+	cursor: move; /* drag-and-drop */
+	user-select: text; /* text selection in drag-and-drop */
 }
 
 .cbi-dynlist > .item::after {
@@ -640,8 +655,33 @@ select,
 	pointer-events: auto;
 }
 
+/* indication line for drag-and-drop in UIDynamicList*/
+.cbi-dynlist > .item.drag-over { 
+	border-top: 1px solid var(--text-color-highest);
+}
+
+/* Make item being dragged in UIDynamicList partially transparent*/
+.cbi-dynlist > .item.dragging {
+	opacity: 0.5;
+}
+
+/* prevent pointer changing when over the span element in UIDynamicList */
+.cbi-dynlist > .item > span {
+	pointer-events: none;
+}
+
 .cbi-dynlist > .add-item {
 	display: flex;
+}
+
+/* indication line for drag-and-drop in UIDynamicList*/
+.cbi-dynlist > .add-item > .cbi-input-text.drag-over {
+	border-top: 1px solid var(--text-color-highest);
+}
+
+/* indication line for drag-and-drop in UIDynamicList*/
+.cbi-dynlist > .add-item > .cbi-button-add.drag-over {
+	border-top: 1px solid var(--text-color-highest);
 }
 
 .cbi-dynlist > .add-item > input,
@@ -652,10 +692,16 @@ select,
 	white-space: nowrap;
 }
 
-.cbi-value-field > .cbi-checkbox {
+.cbi-value-field > .cbi-checkbox,
+.cbi-value-field > div > .cbi-radio {
 	height: 30px;
-	display: flex;
+	display: inline-flex;
 	align-items: center;
+}
+
+.cbi-radio {
+	cursor: pointer;
+	gap: .125em;
 }
 
 .cbi-select {
@@ -666,7 +712,7 @@ select,
 
 .cbi-select select,
 .cbi-select select:focus {
-	-webkit-appearance: none;
+	-webkit-appearance: none; /* nonstandard, should remove in future */
 	appearance: none;
 	outline: none;
 	border: none;
@@ -709,7 +755,6 @@ select,
 }
 
 input[type=file] {
-	background-color: #fff;
 	padding: initial;
 	border: initial;
 	line-height: initial;
@@ -731,9 +776,8 @@ input[type="checkbox"],
 input[type="radio"] {
 	--bd-color: var(--border-color-high);
 	--fg-color: var(--text-color-high);
-
+	-webkit-appearance: none; /* nonstandard, should remove in future */
 	appearance: none;
-	-webkit-appearance: none;
 	width: 14px;
 	height: 14px;
 	color: var(--fg-color);
@@ -754,8 +798,8 @@ input[type="radio"]::after {
 
 input[type="checkbox"]::before,
 input[type="radio"]::before {
-	top: -1px;
-	left: -1px;
+	top: 0;
+	left: 0;
 	width: 14px;
 	height: 14px;
 	background: linear-gradient(var(--background-color-high), var(--background-color-low));
@@ -785,7 +829,7 @@ input[type="radio"]:checked::after {
 }
 
 input[type="radio"]:checked:after {
-	--checkmark-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='8'/></svg>");
+	--checkmark-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='7'/></svg>");
 }
 
 input[type="checkbox"].cbi-input-invalid,
@@ -814,7 +858,7 @@ input[type="radio"].cbi-input-invalid {
 .cbi-dynlist > .item,
 input[type="checkbox"]::before,
 input[type="radio"]::before,
-input, button, textarea {
+input, button, textarea, select {
 	transition: border linear 0.2s, box-shadow linear 0.2s;
 	box-shadow: inset 0 1px 3px hsla(var(--border-color-low-hsl), .01);
 }
@@ -827,7 +871,7 @@ input, button, textarea {
 .cbi-dynlist > .item:focus,
 input[type="checkbox"]:focus::before,
 input[type="radio"]:focus::before,
-input:focus, button:hover, textarea:focus {
+input:focus, button:hover, textarea:focus, select:focus {
 	--focus-color-rgb: 82, 168, 236;
 
 	outline: 0;
@@ -1027,8 +1071,8 @@ header {
 	box-shadow: 0 1px 3px hsla(var(--border-color-low-hsl), .25), inset 0 -1px 0 hsla(var(--border-color-low-hsl), .01);
 	padding: 0;
 	/* the redundant properties below work around a csstidy bug */
-	padding-left: calc((100% - 940px) / 2);
-	padding-right: calc((100% - 940px) / 2);
+	padding-left: calc((100% - 1180px) / 2);
+	padding-right: calc((100% - 1180px) / 2);
 }
 
 .nav {
@@ -1121,8 +1165,7 @@ a.menu:after {
 	top: 40px;
 	left: -9999px;
 	z-index: 900;
-	min-width: 160px;
-	max-width: 220px;
+	min-width: max-content;
 	margin-left: 0;
 	margin-right: 0;
 	padding: 6px 0;
@@ -1181,7 +1224,7 @@ a.menu:after {
 	--tab-inactive-background-color-l: var(--border-color-low-l);
 	--tab-inactive-background-color: var(--border-color-low);
 	--tab-inactive-border-color: var(--border-color-medium);
-	--tab-inactive-text-color-delta-l: calc(85 / 255 * 100%);
+	--tab-inactive-text-color-delta-l: 33.33%;
 	--tab-inactive-text-color-l: calc(var(--tab-inactive-background-color-l) + var(--background-color-delta-l-sign) * var(--tab-inactive-text-color-delta-l));
 	--tab-inactive-text-color: hsl(var(--tab-inactive-background-color-hsl));
 	--tab-inactive-hover-background-color: var(--background-color-high);
@@ -1225,6 +1268,10 @@ a.menu:after {
 	outline: none;
 }
 
+.tabs > li > a:focus-visible, .cbi-tabmenu > li > a:focus-visible {
+	text-decoration: underline;
+}
+
 .tabs > li:not(.active):hover, .cbi-tabmenu > .cbi-tab-disabled:hover {
 	background: linear-gradient(var(--tab-inactive-hover-background-color) 90%, var(--tab-inactive-border-color) 100%);
 }
@@ -1238,12 +1285,16 @@ a.menu:after {
 	content: attr(data-errors);
 	background: #c43c35;
 	color: #fff;
-	min-width: 12px;
-	line-height: 14px;
-	border-radius: 7px;
+	height: 16px;
+	min-width: 16px;
+	border-radius: 8px;
 	text-align: center;
 	margin: 0 5px 0 0;
-	padding: 1px 2px;
+	padding: 3px 2px 1px 2px;
+	display: inline-flex;
+	flex-direction: column;
+	justify-content: center;
+	font-size: 12px;
 }
 
 .cbi-tabmenu.map {
@@ -1322,8 +1373,9 @@ footer {
 	font-size: 12px;
 	color: var(--text-color-medium);
 	/* the redundant properties below work around a csstidy bug */
-	padding-left: calc((100% - 940px) / 2);
-	padding-right: calc((100% - 940px) / 2);
+	/* Match footer with header padding left and right so they are aligned (header uses 1180px, but footer was using 940px) */ 
+	padding-left: calc((100% - 1180px) / 2);
+	padding-right: calc((100% - 1180px) / 2);
 }
 
 footer a {
@@ -1376,6 +1428,20 @@ footer ul.breadcrumb {
 	width: 100%;
 }
 
+.modal > .button-row {
+	display: flex;
+	justify-content: space-between;
+	flex-wrap: wrap;
+}
+
+.modal > .button-row > button:not(:last-of-type) {
+	margin-right: .5em;
+}
+
+.modal > .button-row > button:first-of-type {
+	margin-right: auto;
+}
+
 body.modal-overlay-active {
 	overflow: hidden;
 	height: 100vh;
@@ -1389,7 +1455,7 @@ body.modal-overlay-active #modal_overlay {
 }
 
 .btn .close, .alert-message .close {
-	font-family: Arial, sans-serif;
+	font-family: var(--font-sans);
 	line-height: 18px;
 }
 
@@ -1550,6 +1616,12 @@ body.modal-overlay-active #modal_overlay {
 	color: var(--text-color-high);
 }
 
+.cbi-dropdown img {
+	/* the following are necessary to constrain (vector) images of any size */
+	max-height: 1.6em;  /* Adjusts image height to fit slightly larger than text line height */
+	width: auto;  /* Preserves aspect ratio */
+}
+
 .cbi-dropdown > ul {
 	margin: 0 !important;
 	padding: 0;
@@ -1699,12 +1771,14 @@ body.modal-overlay-active #modal_overlay {
 	color: var(--on-primary-color);
 }
 
-.cbi-dropdown[open] > ul.dropdown > li.focus {
+.cbi-dropdown[open] > ul.dropdown > li.focus,
+.cbi-dropdown[open] > ul.dropdown > li:hover {
 	background: var(--primary-color-low);
 	color: var(--on-primary-color);
 }
 
-.cbi-dropdown[open] > ul.dropdown > li[selected].focus {
+.cbi-dropdown[open] > ul.dropdown > li[selected].focus,
+.cbi-dropdown[open] > ul.dropdown > li[selected]:hover {
 	background: linear-gradient(90deg, var(--primary-color-medium) 50%, var(--primary-color-low));
 }
 
@@ -1797,12 +1871,13 @@ body.modal-overlay-active #modal_overlay {
 
 .zone-forwards {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 }
 
 .zone-forwards > * {
 	flex: 1 1 40%;
 	padding: 1px;
+	text-wrap: auto;
 }
 
 .zone-forwards > span {
@@ -1837,11 +1912,6 @@ body.modal-overlay-active #modal_overlay {
 .btn.small {
 	padding: 7px 9px 7px;
 	font-size: 11px;
-}
-
-button.btn::-moz-focus-inner, input[type=submit].btn::-moz-focus-inner {
-	padding: 0;
-	border: 0;
 }
 
 .close {
@@ -1954,6 +2024,7 @@ form.inline { display: inline; margin-bottom: 0; }
 	width: 100%;
 	color: var(--text-color-highest);
 	margin-bottom: 18px;
+	font-family: monospace;
 }
 
 .cbi-section-table .tr:hover .td,
@@ -1966,15 +2037,13 @@ form.inline { display: inline; margin-bottom: 0; }
 	font-weight: normal;
 }
 
-.cbi-section-table-titles.named::before,
+.cbi-section-table-titles {
+	font-weight: bold;
+}
+
 .cbi-section-table-descr.named::before,
 .cbi-section-table-row[data-title]::before {
-	content: attr(data-title) " ";
-	display: table-cell;
-	padding: 10px 10px 9px;
-	line-height: 18px;
-	font-weight: bold;
-	vertical-align: middle;
+	content: none;
 }
 
 .cbi-section-table-titles.named::before,
@@ -2126,10 +2195,18 @@ th[data-sort-direction="desc"]::after { content: "\a0\25bc"; }
 	padding: .25em;
 }
 
+#cbi-network-interface .ifacebox-body {
+	white-space: normal;
+}
+
+#cbi-network-interface .ifacebox img {
+	width: 24px;
+	height: 24px;
+}
+
 .ifacebadge {
 	display: inline-block;
 	flex-direction: row;
-	white-space: nowrap;
 	border: 1px solid var(--border-color-high);
 	padding: 2px;
 	background: linear-gradient(var(--background-color-high), var(--background-color-high) 25%, var(--background-color-medium));
@@ -2142,8 +2219,8 @@ th[data-sort-direction="desc"]::after { content: "\a0\25bc"; }
 }
 
 .ifacebadge img {
-	width: 16px;
-	height: 16px;
+	width: 32px;
+	height: 32px;
 	vertical-align: middle;
 }
 
@@ -2541,3 +2618,38 @@ div.cbi-value var.cbi-tooltip-container,
 [data-page="admin-system-admin-sshkeys"] .cbi-dynlist {
 	max-width: none;
 }
+
+#view div[style] > svg {
+	background-color: var(--background-color-high)!important;
+}
+
+#view div[style] > svg line[style] {
+	stroke: var(--text-color-highest)!important;
+}
+
+/* === STATUS OVERVIEW: HIDE/SHOW BUTTONS === */
+
+/* Change mouse icon from text cursor to pointer */
+body[data-page='admin-status-overview'] .cbi-title .label {
+  cursor: pointer;
+}
+
+/* Smaller buttons on larger screens */
+@media screen and (min-width : 481px) {
+  body[data-page='admin-status-overview'] .cbi-title .label {
+    line-height: 1em;
+    margin: 0.7em 0;
+  }
+}
+
+/* Slightly fade "show" button */
+body[data-page='admin-status-overview'] .cbi-title .label.notice {
+  opacity: var(--disabled-opacity);
+}
+
+/* Remove fade when hovered */
+body[data-page='admin-status-overview'] .cbi-title .label.notice:hover {
+  opacity: initial;
+}
+
+/* === END STATUS OVERVIEW: HIDE/SHOW BUTTONS === */

@@ -38,7 +38,7 @@ return view.extend({
 	},
 
 	render: function() {
-		var m, s, o;
+		let m, s, o;
 
 		m = new form.Map('vnstat', _('vnStat'), _('vnStat is a network traffic monitor for Linux that keeps a log of network traffic for the selected interface(s).'));
 
@@ -58,13 +58,10 @@ return view.extend({
 		o = s.option(form.DummyValue, '_database');
 
 		o.load = function(section_id) {
-			return fs.exec('/usr/bin/vnstat', ['--json', 'f', '1']).then(L.bind(function(result) {
+			return fs.exec('/usr/bin/vnstat', ['--dbiflist', '1']).then(L.bind(function(result) {
 				var databaseInterfaces = [];
-				if (result.code == 0) {
-					var vnstatData = JSON.parse(result.stdout);
-					for (var i = 0; i < vnstatData.interfaces.length; i++) {
-						databaseInterfaces.push(vnstatData.interfaces[i].name);
-					}
+				if (result.code == 0 && result.stdout) {
+					databaseInterfaces = result.stdout.trim().split('\n');
 				}
 
 				var configInterfaces = uci.get_first('vnstat', 'vnstat', 'interface') || [];

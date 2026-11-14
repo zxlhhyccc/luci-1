@@ -7,62 +7,60 @@
 'require form';
 'require tools.widgets as widgets';
 
-var callInitList, callInitAction, callTimezone,
-    callGetLocaltime, callSetLocaltime, CBILocalTime;
-
-callInitList = rpc.declare({
-	object: 'luci',
-	method: 'getInitList',
+const callRcList = rpc.declare({
+	object: 'rc',
+	method: 'list',
 	params: [ 'name' ],
 	expect: { '': {} },
-	filter: function(res) {
+	filter(res) {
 		for (var k in res)
 			return +res[k].enabled;
 		return null;
 	}
 });
 
-callInitAction = rpc.declare({
-	object: 'luci',
-	method: 'setInitAction',
+const callRcInit = rpc.declare({
+	object: 'rc',
+	method: 'init',
 	params: [ 'name', 'action' ],
 	expect: { result: false }
 });
 
-callGetLocaltime = rpc.declare({
-	object: 'system',
-	method: 'info',
-	expect: { localtime: 0 }
+const callGetUnixtime = rpc.declare({
+	object: 'luci',
+	method: 'getUnixtime',
+	expect: { result: 0 }
 });
 
-callSetLocaltime = rpc.declare({
+const callSetLocaltime = rpc.declare({
 	object: 'luci',
 	method: 'setLocaltime',
 	params: [ 'localtime' ],
 	expect: { result: 0 }
 });
 
-callTimezone = rpc.declare({
+const callTimezone = rpc.declare({
 	object: 'luci',
 	method: 'getTimezones',
 	expect: { '': {} }
 });
 
 function formatTime(epoch) {
-	var date = new Date(epoch * 1000);
+	const date = new Date(epoch * 1000);
+	const zn = uci.get('system', '@system[0]', 'zonename')?.replaceAll(' ', '_') || 'UTC';
+	const ts = uci.get('system', '@system[0]', 'clock_timestyle') || 0;
+	const hc = uci.get('system', '@system[0]', 'clock_hourcycle') || 0;
 
-	return '%04d-%02d-%02d %02d:%02d:%02d'.format(
-		date.getUTCFullYear(),
-		date.getUTCMonth() + 1,
-		date.getUTCDate(),
-		date.getUTCHours(),
-		date.getUTCMinutes(),
-		date.getUTCSeconds()
-	);
+	return new Intl.DateTimeFormat(undefined, {
+		dateStyle: 'medium',
+		timeStyle: (ts == 0) ? 'long' : 'full',
+		hourCycle: (hc == 0) ? undefined : hc,
+		timeZone: zn
+	}).format(date);
 }
 
-CBILocalTime = form.DummyValue.extend({
-	renderWidget: function(section_id, option_id, cfgvalue) {
+const CBILocalTime = form.DummyValue.extend({
+	renderWidget(section_id, option_id, cfgvalue) {
 		return E([], [
 			E('input', {
 				'id': 'localtime',
@@ -83,7 +81,7 @@ CBILocalTime = form.DummyValue.extend({
 				this.ntpd_support ? E('button', {
 					'class': 'cbi-button cbi-button-apply',
 					'click': ui.createHandlerFn(this, function() {
-						return callInitAction('sysntpd', 'restart');
+						return callRcInit('sysntpd', 'restart');
 					}),
 					'disabled': (this.readonly != null) ? this.readonly : this.map.readonly
 				}, _('Sync with NTP-Server')) : ''
@@ -93,21 +91,18 @@ CBILocalTime = form.DummyValue.extend({
 });
 
 return view.extend({
-	load: function() {
+	load() {
 		return Promise.all([
-			callInitList('sysntpd'),
+			callRcList('sysntpd'),
 			callTimezone(),
-			callGetLocaltime(),
+			callGetUnixtime(),
 			uci.load('luci'),
 			uci.load('system')
 		]);
 	},
 
-	render: function(rpc_replies) {
-		var ntpd_enabled = rpc_replies[0],
-		    timezones = rpc_replies[1],
-		    localtime = rpc_replies[2],
-		    m, s, o;
+	render([ntpd_enabled, timezones, unixtime]) {
+		let m, s, o;
 
 		m = new form.Map('system',
 			_('System'),
@@ -129,7 +124,7 @@ return view.extend({
 		 */
 
 		o = s.taboption('general', CBILocalTime, '_systime', _('Local Time'));
-		o.cfgvalue = function() { return localtime };
+		o.cfgvalue = function() { return unixtime };
 		o.ntpd_support = ntpd_enabled;
 
 		o = s.taboption('general', form.Value, 'hostname', _('Hostname'));
@@ -145,58 +140,65 @@ return view.extend({
 		o = s.taboption('general', form.ListValue, 'zonename', _('Timezone'));
 		o.value('UTC');
 
-		var zones = Object.keys(timezones || {}).sort();
-		for (var i = 0; i < zones.length; i++)
-			o.value(zones[i]);
+		const zones = Object.keys(timezones || {}).sort();
+		for (let zone of zones)
+			o.value(zone);
 
 		o.write = function(section_id, formvalue) {
-			var tz = timezones[formvalue] ? timezones[formvalue].tzstring : null;
+			const tz = timezones[formvalue] ? timezones[formvalue].tzstring : null;
 			uci.set('system', section_id, 'zonename', formvalue);
 			uci.set('system', section_id, 'timezone', tz);
 		};
+
+		o = s.taboption('general', form.Flag, 'clock_timestyle', _('Full TimeZone Name'), _('Unchecked means the timezone offset (E.g. GMT+1) is displayed'));
+
+		o = s.taboption('general', form.ListValue, 'clock_hourcycle', _('Time Format'));
+		o.value('', _('Default'));
+		o.value('h12', _('12-Hour Clock'));
+		o.value('h23', _('24-Hour Clock'));
 
 		/*
 		 * Logging
 		 */
 
-		o = s.taboption('logging', form.Value, 'log_size', _('System log buffer size'), "kiB")
-		o.optional    = true
-		o.placeholder = 16
-		o.datatype    = 'uinteger'
+		o = s.taboption('logging', form.Value, 'log_size', _('System log buffer size'), "kiB");
+		o.optional    = true;
+		o.placeholder = 128;
+		o.datatype    = 'uinteger';
 
-		o = s.taboption('logging', form.Value, 'log_ip', _('External system log server'))
-		o.optional    = true
-		o.placeholder = '0.0.0.0'
-		o.datatype    = 'host'
+		o = s.taboption('logging', form.Value, 'log_ip', _('External system log server'));
+		o.optional    = true;
+		o.placeholder = '0.0.0.0';
+		o.datatype    = 'host';
 
-		o = s.taboption('logging', form.Value, 'log_port', _('External system log server port'))
-		o.optional    = true
-		o.placeholder = 514
-		o.datatype    = 'port'
+		o = s.taboption('logging', form.Value, 'log_port', _('External system log server port'));
+		o.optional    = true;
+		o.placeholder = 514;
+		o.datatype    = 'port';
 
-		o = s.taboption('logging', form.ListValue, 'log_proto', _('External system log server protocol'))
-		o.value('udp', 'UDP')
-		o.value('tcp', 'TCP')
+		o = s.taboption('logging', form.ListValue, 'log_proto', _('External system log server protocol'));
+		o.value('udp', 'UDP');
+		o.value('tcp', 'TCP');
 
-		o = s.taboption('logging', form.Value, 'log_file', _('Write system log to file'))
-		o.optional    = true
-		o.placeholder = '/tmp/system.log'
+		o = s.taboption('logging', form.Value, 'log_file', _('Write system log to file'));
+		o.optional    = true;
+		o.placeholder = '/tmp/system.log';
 
-		o = s.taboption('logging', form.ListValue, 'conloglevel', _('Log output level'))
-		o.value(8, _('Debug'))
-		o.value(7, _('Info'))
-		o.value(6, _('Notice'))
-		o.value(5, _('Warning'))
-		o.value(4, _('Error'))
-		o.value(3, _('Critical'))
-		o.value(2, _('Alert'))
-		o.value(1, _('Emergency'))
+		o = s.taboption('logging', form.ListValue, 'conloglevel', _('Log output level'), _('Only affects dmesg kernel log'));
+		o.value(8, _('Debug'));
+		o.value(7, _('Info'));
+		o.value(6, _('Notice'));
+		o.value(5, _('Warning'));
+		o.value(4, _('Error'));
+		o.value(3, _('Critical'));
+		o.value(2, _('Alert'));
+		o.value(1, _('Emergency'));
 
-		o = s.taboption('logging', form.ListValue, 'cronloglevel', _('Cron Log Level'))
-		o.default = 8
-		o.value(5, _('Debug'))
-		o.value(8, _('Normal'))
-		o.value(9, _('Warning'))
+		o = s.taboption('logging', form.ListValue, 'cronloglevel', _('Cron Log Level'));
+		o.default = 7;
+		o.value(7, _('Normal'));
+		o.value(9, _('Disabled'));
+		o.value(5, _('Debug'));
 
 		/*
 		 * Zram Properties
@@ -226,23 +228,29 @@ return view.extend({
 		o.uciconfig = 'luci';
 		o.ucisection = 'main';
 		o.ucioption = 'lang';
-		o.value('auto');
+		o.value('auto', _('auto'));
 
-		var l = Object.assign({ en: 'English' }, uci.get('luci', 'languages')),
-		    k = Object.keys(l).sort();
-		for (var i = 0; i < k.length; i++)
-			if (k[i].charAt(0) != '.')
-				o.value(k[i], l[k[i]]);
+		const l = Object.assign({ en: 'English' }, uci.get('luci', 'languages'));
+		const keys = Object.keys(l).sort();
+		for (let k of keys)
+			if (k.charAt(0) != '.')
+				o.value(k, l[k]);
 
 		o = s.taboption('language', form.ListValue, '_mediaurlbase', _('Design'))
 		o.uciconfig = 'luci';
 		o.ucisection = 'main';
 		o.ucioption = 'mediaurlbase';
 
-		var k = Object.keys(uci.get('luci', 'themes') || {}).sort();
-		for (var i = 0; i < k.length; i++)
-			if (k[i].charAt(0) != '.')
-				o.value(uci.get('luci', 'themes', k[i]), k[i]);
+		const th = Object.keys(uci.get('luci', 'themes') || {}).sort();
+		for (let t of th)
+			if (t.charAt(0) != '.')
+				o.value(uci.get('luci', 'themes', t), t);
+
+		o = s.taboption('language', form.Flag, '_tablefilters', _('Table Filters'));
+		o.default = o.disabled;
+		o.uciconfig = 'luci';
+		o.ucisection = 'main';
+		o.ucioption = 'tablefilters';
 
 		/*
 		 * NTP
@@ -271,7 +279,7 @@ return view.extend({
 				else
 					uci.unset('system', 'ntp', 'enabled');
 
-				return callInitAction('sysntpd', 'enable');
+				return callRcInit('sysntpd', 'enable');
 			};
 			o.load = function(section_id) {
 				return (ntpd_enabled == 1 &&
@@ -297,7 +305,8 @@ return view.extend({
 			o.default = o.enabled;
 			o.depends('enabled', '1');
 
-			o = s.taboption('timesync', form.DynamicList, 'server', _('NTP server candidates'));
+			o = s.taboption('timesync', form.DynamicList, 'server', _('NTP server candidates'),
+				_('List of upstream NTP server candidates with which to synchronize.'));
 			o.datatype = 'host(0)';
 			o.ucisection = 'ntp';
 			o.depends('enabled', '1');
@@ -308,7 +317,7 @@ return view.extend({
 
 		return m.render().then(function(mapEl) {
 			poll.add(function() {
-				return callGetLocaltime().then(function(t) {
+				return callGetUnixtime().then(function(t) {
 					mapEl.querySelector('#localtime').value = formatTime(t);
 				});
 			});

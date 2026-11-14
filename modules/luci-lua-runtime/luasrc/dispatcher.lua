@@ -5,6 +5,7 @@
 module("luci.dispatcher", package.seeall)
 
 local http = _G.L.http
+local fs     = require "nixio.fs"
 
 context = setmetatable({}, {
 	__index = function(t, k)
@@ -12,8 +13,6 @@ context = setmetatable({}, {
 			return _G.L.ctx.request_path
 		elseif k == "requestargs" then
 			return _G.L.ctx.request_args
-		elseif k == "requested" or k == "dispatched" then
-			return _G.L.node
 		else
 			return _G.L.ctx[k]
 		end
@@ -169,12 +168,12 @@ function process_lua_controller(path)
 					login = true,
 					methods = { "cookie:sysauth_https", "cookie:sysauth_http" }
 				}
-			elseif subname == "rpc" and entry.module == "luci.controller.rpc" then
+			elseif path == "rpc" and modname == "luci.controller.rpc" then
 				entry.auth = {
 					login = false,
-					methods = { "query:auth", "cookie:sysauth_https", "cookie:sysauth_http" }
+					methods = { "query:auth", "cookie:sysauth_https", "cookie:sysauth_http", "cookie:sysauth" }
 				}
-			elseif entry.module == "luci.controller.admin.uci" then
+			elseif modname == "luci.controller.admin.uci" then
 				entry.auth = {
 					login = false,
 					methods = { "param:sid" }
@@ -356,6 +355,28 @@ function invoke_form_action(model, ...)
 	_G.L.include("footer")
 end
 
+function render_lua_template(path)
+	local tpl = require "luci.template"
+
+	tpl.render(path, getfenv(1))
+end
+
+function test_post_security()
+	if http:getenv("REQUEST_METHOD") ~= "POST" then
+		http:status(405, "Method Not Allowed")
+		http:header("Allow", "POST")
+		return false
+	end
+
+	if http:formvalue("token") ~= context.authtoken then
+		http:status(403, "Forbidden")
+		_G.L.include("csrftoken")
+		return false
+	end
+
+	return true
+end
+
 
 function call(name, ...)
 	return {
@@ -366,14 +387,18 @@ function call(name, ...)
 	}
 end
 
-function post(name, ...)
+function post_on(params, name, ...)
 	return {
 		["type"] = "call",
 		["module"] = __controller,
 		["function"] = name,
 		["parameters"] = select('#', ...) > 0 and {...} or nil,
-		["post"] = true
+		["post"] = params
 	}
+end
+
+function post(...)
+	return post_on(true, ...)
 end
 
 function view(name)

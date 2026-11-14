@@ -2,7 +2,7 @@
 // Rendering of DSL spectrum graphs  showing
 // US/DS SNR and US/DS bits/tone
 //
-// This version does depend on an ubus version that support DSL line stattiscis  but 
+// This version does depend on an ubus version that support DSL line statistics but 
 // does not depend on chart.js or any other package
 
 class DataSet {
@@ -89,6 +89,7 @@ const usQLNData  = new DataSet(window.json['qln']['upstream'], myQLNFunction);
 const dsQLNData  = new DataSet(window.json['qln']['downstream'], myQLNFunction);
 const usHLOGData = new DataSet(window.json['hlog']['upstream'], myHLOGFunction);
 const dsHLOGData = new DataSet(window.json['hlog']['downstream'], myHLOGFunction);
+const pilotTonesData = window.json['pilot_tones'] || [];
 
 const marginX = 50;
 const marginY = 80;
@@ -112,14 +113,20 @@ let bitsChart = {
 	},
 	"dataSet" : [
 		{
-			"data" :usBitsData.data,
-			"color":"YellowGreen",
-			"title": ("Upstream bits allocation")
+			"data" : usBitsData.data,
+			"color": "YellowGreen",
+			"title": _("Upstream bits allocation")
 		},
 		{
 			"data" : dsBitsData.data,
 			"color": "navy",
 			"title": _("Downstream bits allocation")
+		},
+		{
+			"lines": true,
+			"data": pilotTonesData,
+			"color": "red",
+			"title": _("Pilot tones")
 		}
 	]
 };
@@ -214,18 +221,36 @@ let hLogChart = {
 	]
 };
 
-function drawChart (info) {
+function drawChart(info) {
 	drawAxisX(info.config, info.config.minX, info.config.maxX, info.config.stepX, info.config.titleX);
 	drawAxisY(info.config, info.config.minY, info.config.maxY, info.config.stepY, info.config.titleY);
 
 	drawLegend(info.config, info.dataSet);
 
-	drawData(info.config, info.dataSet[0].data, info.dataSet[0].color);
-	drawData(info.config, info.dataSet[1].data, info.dataSet[1].color);
+	for (let item of info.dataSet) {
+		if (item.lines === true) {
+			drawLines(info.config, item.data, item.color);
+		} else {
+			drawData(info.config, item.data, item.color);
+		}
+	}
 }
 
-function drawBlocks(config, dataPoints, color, borders) {
-	borders.map(drawBlock, {config, dataPoints, color, borders});
+function drawLines(config, dataPoints, color) {
+	let ctx = config.ctx;
+	let minX = config.minX;
+	let maxX = config.maxX;
+
+	ctx.strokeStyle = color;
+	ctx.beginPath();
+
+	for (let item of dataPoints) {
+		let relX = (item - minX) / (maxX - minX);
+		ctx.moveTo(relX * config.graphWidth + marginX, marginY);
+		ctx.lineTo(relX * config.graphWidth + marginX, marginY + config.graphHeight);
+	}
+
+	ctx.stroke();
 }
 
 function drawData(config, dataPoints, color) {
@@ -236,7 +261,7 @@ function drawData(config, dataPoints, color) {
 	let minY = config.minY;
 	let maxY = config.maxY;
 	let startX = (dataPoints[0].x  - config.minX) / (config.maxX - config.minX)
-	let startY = (config.minY - config.minY) / (config.maxY - config.minY)
+	let startY = (dataPoints[0].y - config.minY) / (config.maxY - config.minY)
 
 	ctx.fillStyle = color;
 	ctx.beginPath();
@@ -260,44 +285,42 @@ function drawData(config, dataPoints, color) {
 function drawLegend(config, dataSet){
 	let ctx = config.ctx;
 	let graphWidth = config.graphWidth;
-	let graphHeight = config.graphHeight;
 
 	ctx.font = "12px Arial";
-	ctx.fillStyle = dataSet[0].color;
-	ctx.fillRect(0.5 * graphWidth + marginX - ctx.measureText(dataSet[0].title).width - 50, config.canvas.height - marginY*1/4 - 8, 30, 10);
-	ctx.strokeStyle = "#C0C0C0";
-	ctx.strokeRect(0.5 * graphWidth + marginX - ctx.measureText(dataSet[0].title).width - 50, config.canvas.height - marginY*1/4 - 8, 30, 10);
 
-	if (darkMode == "true") {
-		ctx.strokeStyle = "#505050";
-		ctx.fillStyle = "#A0A0A0";
-	} else {
-		ctx.strokeStyle = "#303030";
-		ctx.fillStyle = "#303030";
+	let legendWidth = -10;
+	for (let item of dataSet) {
+		legendWidth += 50 + ctx.measureText(item.title).width;
 	}
 
-	ctx.textAlign = "right"
-	ctx.fillText(dataSet[0].title, 0.5 * graphWidth + marginX - 10, config.canvas.height - marginY*1/4);
+	var x = 0.5 * (graphWidth - legendWidth) + marginX;
+	var y = config.canvas.height - marginY*1/4;
 
-	ctx.fillStyle = dataSet[1].color;
-	ctx.fillRect(0.5 * graphWidth + marginX, config.canvas.height - marginY*1/4 - 8, 30, 10);
-	ctx.strokeStyle = "#C0C0C0";
-	ctx.strokeRect(0.5 * graphWidth + marginX, config.canvas.height - marginY*1/4 - 8, 30, 10);
+	for (let item of dataSet) {
+		ctx.fillStyle = item.color;
+		ctx.fillRect(x, y - 8, 30, 10);
+		ctx.strokeStyle = "#C0C0C0";
+		ctx.strokeRect(x, y - 8, 30, 10);
 
-	if (darkMode == "true") {
-		ctx.fillStyle = "#A0A0A0";
-	} else {
-		ctx.fillStyle = "#303030";
+		if (darkMode == "true") {
+			ctx.fillStyle = "#A0A0A0";
+		} else {
+			ctx.fillStyle = "#303030";
+		}
+
+		x += 40;
+
+		ctx.textAlign = "left"
+		ctx.fillText(item.title, x, y);
+
+		x += ctx.measureText(item.title).width;
+		x += 10;
 	}
-
-	ctx.textAlign = "left"
-	ctx.fillText(dataSet[1].title, 0.5 * graphWidth + marginX + 40, config.canvas.height - marginY*1/4);
 }
 
 function drawAxisX(config, minValue, maxValue, step, title) {
 	let ctx = config.ctx;
 	let graphWidth = config.graphWidth;
-	let graphHeight = config.graphHeight;
 
 	ctx.font = "12px Arial";
 	ctx.textAlign = "center";
@@ -328,7 +351,6 @@ function drawAxisX(config, minValue, maxValue, step, title) {
 
 function drawAxisY(config, minValue, maxValue, step, title) {
 	let ctx = config.ctx
-	let graphWidth = config.graphWidth;
 	let graphHeight = config.graphHeight;
 
 	ctx.font = "12px Arial";
@@ -356,9 +378,9 @@ function drawAxisY(config, minValue, maxValue, step, title) {
 	ctx.font = "12px Arial";
 	ctx.textAlign = "center";
 	ctx.translate(marginX/3, marginY + graphHeight / 2);
-	ctx.rotate(-3.14 /2);
+	ctx.rotate(-Math.PI /2);
 	ctx.fillText(title, 0, 0);
-	ctx.rotate(3.14 /2)
+	ctx.rotate(Math.PI /2)
 	ctx.translate(-marginX/3,-(marginY + graphHeight / 2));
 }
 

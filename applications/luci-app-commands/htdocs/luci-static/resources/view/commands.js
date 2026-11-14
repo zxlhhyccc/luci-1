@@ -5,7 +5,7 @@
 
 return view.extend({
 	render: function(data) {
-		var m, s, o;
+		let m, s, o;
 
 		m = new form.Map('luci', _('Custom Commands'),
 			_('This page allows you to configure custom shell commands which can be easily invoked from the web interface.'));
@@ -14,9 +14,14 @@ return view.extend({
 		s.nodescriptions = true;
 		s.anonymous = true;
 		s.addremove = true;
+		s.sortable = true;
 
-		o = s.option(form.Value, 'name', _('Description'),
-			_('A short textual description of the configured command'));
+		o = s.option(form.Value, 'name', _('Name'),
+			_('A short name for the configured command'));
+
+		o = s.option(form.Value, 'description', _('Description'),
+			_('An optional longer description to display on the execution page'));
+		o.optional = true;
 
 		o = s.option(form.Value, 'command', _('Command'), _('Command line to execute'));
 		o.textvalue = function(section_id) {

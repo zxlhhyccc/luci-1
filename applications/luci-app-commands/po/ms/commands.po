@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"PO-Revision-Date: 2019-12-18 04:21+0000\n"
-"Last-Translator: Pusak Hitam <thegame.gamesky@gmail.com>\n"
+"PO-Revision-Date: 2025-04-22 05:24+0000\n"
+"Last-Translator: Abdul Muizz Bin Abdul Jalil <abmuizz@gmail.com>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationscommands/ms/>\n"
 "Language: ms\n"
@@ -10,41 +10,39 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 3.10-dev\n"
+"X-Generator: Weblate 5.11.1-dev\n"
 
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:19
-msgid "A short textual description of the configured command"
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:20
+msgid "A short name for the configured command"
 msgstr ""
 
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:30
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:35
 msgid ""
 "Allow executing the command and downloading its output without prior "
 "authentication"
 msgstr ""
+"Benarkan melaksanakan arahan dan memuat turun hasilnya tanpa pengesahan "
+"terlebih dahulu."
 
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:27
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:32
 msgid "Allow the user to provide additional command line arguments"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:156
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:23
+msgid "An optional longer description to display on the execution page"
+msgstr ""
+
+#: applications/luci-app-commands/ucode/template/commands.ut:148
 msgid "Arguments:"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:60
-msgid "Binary data not displayed, download instead."
-msgstr ""
-
-#: applications/luci-app-commands/ucode/template/commands.ut:65
-msgid "Code:"
-msgstr ""
-
-#: applications/luci-app-commands/ucode/template/commands.ut:174
+#: applications/luci-app-commands/ucode/template/commands.ut:166
 msgid "Collecting data..."
 msgstr "Mengumpul data..."
 
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:21
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:26
 msgid "Command"
-msgstr ""
+msgstr "Arahan"
 
 #: applications/luci-app-commands/ucode/template/commands_public.ut:32
 msgid "Command executed successfully."
@@ -54,21 +52,13 @@ msgstr ""
 msgid "Command exited with status code %d"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:67
-msgid "Command failed"
-msgstr ""
-
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:21
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:26
 msgid "Command line to execute"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:67
-msgid "Command successful"
-msgstr ""
-
-#: applications/luci-app-commands/ucode/template/commands.ut:154
+#: applications/luci-app-commands/ucode/template/commands.ut:143
 msgid "Command:"
-msgstr ""
+msgstr "Arahan:"
 
 #: applications/luci-app-commands/root/usr/share/luci/menu.d/luci-app-commands.json:23
 msgid "Configure"
@@ -76,55 +66,47 @@ msgstr ""
 
 #: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:10
 #: applications/luci-app-commands/root/usr/share/luci/menu.d/luci-app-commands.json:3
-#: applications/luci-app-commands/ucode/template/commands.ut:137
+#: applications/luci-app-commands/ucode/template/commands.ut:126
 msgid "Custom Commands"
 msgstr ""
 
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:26
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:31
 msgid "Custom arguments"
 msgstr ""
 
 #: applications/luci-app-commands/root/usr/share/luci/menu.d/luci-app-commands.json:14
 msgid "Dashboard"
-msgstr ""
+msgstr "Papan pemuka"
 
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:18
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:22
 msgid "Description"
 msgstr "Keterangan"
 
-#: applications/luci-app-commands/ucode/template/commands.ut:160
+#: applications/luci-app-commands/ucode/template/commands.ut:152
 msgid "Download"
-msgstr ""
-
-#: applications/luci-app-commands/ucode/template/commands.ut:117
-msgid "Download execution result"
-msgstr ""
-
-#: applications/luci-app-commands/ucode/template/commands.ut:73
-msgid "Failed to execute command!"
-msgstr ""
+msgstr "Muat turun"
 
 #: applications/luci-app-commands/root/usr/share/rpcd/acl.d/luci-app-commands.json:3
 msgid "Grant UCI access for luci-app-commands"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:162
+#: applications/luci-app-commands/ucode/template/commands.ut:154
 msgid "Link"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:47
+#: applications/luci-app-commands/ucode/template/commands.ut:41
 msgid "Loading"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:117
-msgid "Or display result"
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:19
+msgid "Name"
 msgstr ""
 
-#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:29
+#: applications/luci-app-commands/htdocs/luci-static/resources/view/commands.js:34
 msgid "Public access"
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:159
+#: applications/luci-app-commands/ucode/template/commands.ut:151
 msgid "Run"
 msgstr ""
 
@@ -142,10 +124,6 @@ msgid ""
 "invoked from the web interface."
 msgstr ""
 
-#: applications/luci-app-commands/ucode/template/commands.ut:144
+#: applications/luci-app-commands/ucode/template/commands.ut:133
 msgid "This section contains no values yet"
-msgstr ""
-
-#: applications/luci-app-commands/ucode/template/commands.ut:48
-msgid "Waiting for command to complete..."
 msgstr ""

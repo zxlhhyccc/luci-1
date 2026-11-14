@@ -1,18 +1,19 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2020-12-10 19:29+0000\n"
-"Last-Translator: Ryota <21ryotagamer@gmail.com>\n"
+"PO-Revision-Date: 2026-10-18 16:40+0000\n"
+"Last-Translator: Monarch <monarch.scrap-0p@users.noreply.hosted.weblate.org>"
+"\n"
 "Language-Team: Japanese <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationsaria2/ja/>\n"
 "Language: ja\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 4.4-dev\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:433
 msgid "<abbr title=\"Local Peer Discovery\">LPD</abbr> enabled"
-msgstr "<abbr title=\"Local Peer Discovery\">LPD2</abbr>を有効"
+msgstr "<abbr title=\"Local Peer Discovery\">LPD</abbr> を有効"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:551
 msgid "Additional BT tracker"
@@ -129,11 +130,12 @@ msgstr "ディスク・キャッシュ"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:396
 msgid "Don't split less than 2*SIZE byte range. Possible values: 1M-1024M."
-msgstr ""
+msgstr "2*SIZE バイト未満の範囲を分割しないでください。1Mから1024Mの間で設定可能です"
+"。"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:391
 msgid "Download a file using N connections."
-msgstr ""
+msgstr "N 件の接続を使用してダウンロードします。"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:212
 msgid "Download directory"
@@ -141,31 +143,32 @@ msgstr "ダウンロード先のディレクトリ"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:417
 msgid "Enable IPv4 DHT functionality. It also enables UDP tracker support."
-msgstr ""
+msgstr "IPv4 DHT 機能を有効にします。これにより UDP トラッカーのサポートも有効になり"
+"ます。"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:427
 msgid "Enable IPv6 DHT functionality."
-msgstr ""
+msgstr "IPv6 DHT機能を有効にします。"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:435
 msgid "Enable Local Peer Discovery."
-msgstr ""
+msgstr "ローカルピア探索を有効化します。"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:444
 msgid "Enable Peer Exchange extension."
-msgstr ""
+msgstr "ピア交換拡張機能を有効にします。"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:579
 msgid "Enable disk cache (in bytes), set 0 to disabled."
-msgstr ""
+msgstr "ディスクキャッシュのサイズ (バイト)。0 に設定すると無効化します。"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:220
 msgid "Enable logging"
-msgstr "ログの有効化"
+msgstr "ログを有効にする"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:442
 msgid "Enable peer exchange"
-msgstr ""
+msgstr "ピア交換を有効にする"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:306
 msgid "Enable proxy"
@@ -185,11 +188,11 @@ msgstr "追加設定"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:487
 msgid "False"
-msgstr ""
+msgstr "無効"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:584
 msgid "File allocation"
-msgstr ""
+msgstr "ファイル割り当て"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/files.js:45
 #: applications/luci-app-aria2/root/usr/share/luci/menu.d/luci-app-aria2.json:24
@@ -290,8 +293,8 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:625
 msgid ""
-"List of extra settings. Format: option=value, eg. <code>netrc-path=/tmp/."
-"netrc</code>."
+"List of extra settings. Format: option=value, eg. <code>netrc-path=/"
+"tmp/.netrc</code>."
 msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:49
@@ -304,7 +307,7 @@ msgstr "ログ"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:58
 msgid "Log Data"
-msgstr ""
+msgstr "ログのデータ"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:223
 msgid "Log file"
@@ -405,19 +408,19 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:341
 msgid "Private key"
-msgstr ""
+msgstr "秘密鍵"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:317
 msgid "Proxy password"
-msgstr ""
+msgstr "プロキシ パスワード"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:314
 msgid "Proxy user"
-msgstr ""
+msgstr "プロキシ ユーザー"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:240
 msgid "RPC Options"
-msgstr ""
+msgstr "RPC オプション"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:257
 msgid "RPC authentication method"
@@ -425,7 +428,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:283
 msgid "RPC certificate"
-msgstr ""
+msgstr "RPC 証明書"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:265
 msgid "RPC password"
@@ -437,7 +440,7 @@ msgstr "RPC ポート"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:293
 msgid "RPC private key"
-msgstr ""
+msgstr "RPC 秘密鍵"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:276
 msgid "RPC secure"
@@ -614,12 +617,12 @@ msgstr ""
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:585
 msgid ""
 "Specify file allocation method. If you are using newer file systems such as "
-"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), \"falloc"
-"\" is your best choice. It allocates large(few GiB) files almost instantly, "
-"but it may not be available if your system doesn't have posix_fallocate(3) "
-"function. Don't use \"falloc\" with legacy file systems such as ext3 and "
-"FAT32 because it takes almost same time as \"prealloc\" and it blocks aria2 "
-"entirely until allocation finishes."
+"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), "
+"\"falloc\" is your best choice. It allocates large(few GiB) files almost "
+"instantly, but it may not be available if your system doesn't have "
+"posix_fallocate(3) function. Don't use \"falloc\" with legacy file systems "
+"such as ext3 and FAT32 because it takes almost same time as \"prealloc\" and "
+"it blocks aria2 entirely until allocation finishes."
 msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:505
@@ -707,7 +710,7 @@ msgstr "トークン"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:486
 msgid "True"
-msgstr ""
+msgstr "有効"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:310
 msgid "Use a proxy server for all protocols."
@@ -778,30 +781,12 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:594
 msgid "falloc"
-msgstr ""
+msgstr "falloc"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:592
 msgid "prealloc"
-msgstr ""
+msgstr "prealloc"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:593
 msgid "trunc"
-msgstr ""
-
-#~ msgid "Empty file."
-#~ msgstr "空のファイルです。"
-
-#~ msgid "Failed to load log data."
-#~ msgstr "ログ・データの読み込みに失敗しました。"
-
-#~ msgid "File does not exist."
-#~ msgstr "ファイルが存在しません。"
-
-#~ msgid "Refresh every 10 seconds."
-#~ msgstr "10 秒ごとにリフレッシュします。"
-
-#~ msgid "Show URL"
-#~ msgstr "URL を表示"
-
-#~ msgid "Use WebSocket"
-#~ msgstr "WebSocket を使用"
+msgstr "trunc"

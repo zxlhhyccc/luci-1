@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2013-05-31 23:40+0200\n"
-"PO-Revision-Date: 2021-05-10 09:32+0000\n"
+"PO-Revision-Date: 2026-05-15 10:43+0000\n"
 "Last-Translator: ssantos <ssantos@web.de>\n"
 "Language-Team: Portuguese <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationstransmission/pt/>\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.7-dev\n"
+"X-Generator: Weblate 2026.5.dev0\n"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:65
 msgid "Alternative download speed"
@@ -112,7 +112,7 @@ msgstr "Ativado"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:136
 msgid "Encryption"
-msgstr "Encriptação"
+msgstr "Codificação"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:149
 msgid "Error"
@@ -140,7 +140,7 @@ msgstr "Configurações globais"
 
 #: applications/luci-app-transmission/root/usr/share/rpcd/acl.d/luci-app-transmission.json:3
 msgid "Grant UCI access for luci-app-transmission"
-msgstr "Conceder acesso UCI ao luci-app-transmission"
+msgstr "Conceder UCI acesso ao luci-app-transmission"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:289
 msgid "Idle seeding limit"
@@ -160,7 +160,7 @@ msgstr "Ativado diretório incompletos"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:150
 msgid "Info"
-msgstr "Info"
+msgstr "Informações"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:144
 msgid "LPD enabled"
@@ -390,14 +390,8 @@ msgid "Speed limit up enabled"
 msgstr "Limite superior de velocidade ativado"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:179
-msgid ""
-"This is documented on <a href=\"https://www.irif.fr/~jch/software/bittorrent/"
-"tcp-congestion-control.html\" target=\"_blank\" rel=\"noreferrer noopener"
-"\">tcp-congestion-control</a>."
-msgstr ""
-"Isto está documentado em <a href=\"https://www.irif.fr/~jch/software/"
-"bittorrent/tcp-congestion-control.html\" target=\"_blank\" rel=\"noreferrer "
-"noopener\">tcp-congestion-control</a>."
+msgid "This is documented on %s."
+msgstr "Isto é documentado em %."
 
 #: applications/luci-app-transmission/root/usr/share/luci/menu.d/luci-app-transmission.json:3
 msgid "Transmission"
@@ -441,8 +435,11 @@ msgstr "em minutos a partir da meia-noite"
 msgid "uTP enabled"
 msgstr "uTP ativado"
 
-#~ msgid "Forced"
-#~ msgstr "Forçado"
-
-#~ msgid "Peer socket tos"
-#~ msgstr "TOS da conexão do parceiro"
+#~ msgid ""
+#~ "This is documented on <a href=\"https://www.irif.fr/~jch/software/"
+#~ "bittorrent/tcp-congestion-control.html\" target=\"_blank\" "
+#~ "rel=\"noreferrer noopener\">tcp-congestion-control</a>."
+#~ msgstr ""
+#~ "Isto está documentado em <a href=\"https://www.irif.fr/~jch/software/"
+#~ "bittorrent/tcp-congestion-control.html\" target=\"_blank\" "
+#~ "rel=\"noreferrer noopener\">tcp-congestion-control</a>."

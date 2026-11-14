@@ -3,12 +3,17 @@
 # Execute from within root of Luci feed, usually feeds/luci
 # $Id$
 
+# NOTE: Darwin before 13.6.4 (22G513) may have had bugs in some TZinfo2 files.
+# Some lacked the mandatory footers detailed in RFC 8536. A complete tzdata can
+# not be built when this script is run on Darwin 13.6.3 and possibly other
+# Darwin versions released prior to 13.6.4 (e.g. even Darwin (Sonoma) 14.2.1).
+
 use strict;
 
 my %TZ;
 
 my $tzdin  = $ARGV[0] || "/usr/share/zoneinfo";
-my $tzdout = $ARGV[1] || "./modules/luci-base/luasrc/sys/zoneinfo";
+my $tzdout = $ARGV[1] || "./modules/luci-lua-runtime/luasrc/sys/zoneinfo";
 
 local $/ = "\012";
 open( ZTAB, "< $tzdin/zone.tab" ) || die "open($tzdin/zone.tab): $!";
@@ -34,7 +39,8 @@ while( ! eof ZTAB ) {
 		close ZONE;
 
 		if( $tz ) {
-			$zone =~ s/_/ /g;
+			# Don't replace underscores with spaces: correct names contain underscores.
+			# $zone =~ s/_/ /g;
 			$TZ{$zone} = $tz;
 		}
 	}

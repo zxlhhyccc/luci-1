@@ -9,12 +9,12 @@
 'require tools.widgets as widgets';
 
 function rule_proto_txt(s, ctHelpers) {
-	var f = (uci.get('firewall', s, 'family') || '').toLowerCase().replace(/^(?:any|\*)$/, '');
+	const f = (uci.get('firewall', s, 'family') || '').toLowerCase().replace(/^(?:any|\*)$/, '');
 
-	var proto = L.toArray(uci.get('firewall', s, 'proto')).filter(function(p) {
+	const proto = L.toArray(uci.get('firewall', s, 'proto')).filter(function(p) {
 		return (p != '*' && p != 'any' && p != 'all');
 	}).map(function(p) {
-		var pr = fwtool.lookupProto(p);
+		const pr = fwtool.lookupProto(p);
 		return {
 			num:   pr[0],
 			name:  pr[1],
@@ -22,15 +22,15 @@ function rule_proto_txt(s, ctHelpers) {
 		};
 	});
 
-	m = String(uci.get('firewall', s, 'helper') || '').match(/^(!\s*)?(\S+)$/);
-	var h = m ? {
+	let m = String(uci.get('firewall', s, 'helper') || '').match(/^(!\s*)?(\S+)$/);
+	const h = m ? {
 		val:  m[0].toUpperCase(),
 		inv:  m[1],
 		name: (ctHelpers.filter(function(ctH) { return ctH.name.toLowerCase() == m[2].toLowerCase() })[0] || {}).description
 	} : null;
 
 	m = String(uci.get('firewall', s, 'mark')).match(/^(!\s*)?(0x[0-9a-f]{1,8}|[0-9]{1,10})(?:\/(0x[0-9a-f]{1,8}|[0-9]{1,10}))?$/i);
-	var w = m ? {
+	const w = m ? {
 		val:  m[0].toUpperCase().replace(/X/g, 'x'),
 		inv:  m[1],
 		num:  '0x%02X'.format(+m[2]),
@@ -38,7 +38,7 @@ function rule_proto_txt(s, ctHelpers) {
 	} : null;
 
 	m = String(uci.get('firewall', s, 'dscp')).match(/^(!\s*)?(?:(CS[0-7]|BE|AF[1234][123]|EF)|(0x[0-9a-f]{1,2}|[0-9]{1,2}))$/);
-	var d = m ? {
+	const d = m ? {
 		val:  m[0],
 		inv:  m[1],
 		name: m[2],
@@ -58,8 +58,8 @@ function rule_proto_txt(s, ctHelpers) {
 }
 
 function rule_src_txt(s, hosts) {
-	var z = uci.get('firewall', s, 'src'),
-	    d = (uci.get('firewall', s, 'direction') == 'in') ? uci.get('firewall', s, 'device') : null;
+	const z = uci.get('firewall', s, 'src');
+	const d = (uci.get('firewall', s, 'direction') == 'in') ? uci.get('firewall', s, 'device') : null;
 
 	return fwtool.fmt(_('From %{src}%{src_device?, interface <var>%{src_device}</var>}%{src_ip?, IP %{src_ip#%{next?, }<var%{item.inv? data-tooltip="Match IP addresses except %{item.val}."}>%{item.ival}</var>}}%{src_port?, port %{src_port#%{next?, }<var%{item.inv? data-tooltip="Match ports except %{item.val}."}>%{item.ival}</var>}}%{src_mac?, MAC %{src_mac#%{next?, }<var%{item.inv? data-tooltip="Match MACs except %{item.val}%{item.hint.name? a.k.a. %{item.hint.name}}.":%{item.hint.name? data-tooltip="%{item.hint.name}"}}>%{item.ival}</var>}}'), {
 		src: E('span', { 'class': 'zonebadge', 'style': fwmodel.getZoneColorStyle(z) }, [(z == '*') ? E('em', _('any zone')) : (z ? E('strong', z) : E('em', _('this device')))]),
@@ -71,8 +71,8 @@ function rule_src_txt(s, hosts) {
 }
 
 function rule_dest_txt(s) {
-	var z = uci.get('firewall', s, 'dest'),
-	    d = (uci.get('firewall', s, 'direction') == 'out') ? uci.get('firewall', s, 'device') : null;
+	const z = uci.get('firewall', s, 'dest');
+	const d = (uci.get('firewall', s, 'direction') == 'out') ? uci.get('firewall', s, 'device') : null;
 
 	return fwtool.fmt(_('To %{dest}%{dest_device?, interface <var>%{dest_device}</var>}%{dest_ip?, IP %{dest_ip#%{next?, }<var%{item.inv? data-tooltip="Match IP addresses except %{item.val}."}>%{item.ival}</var>}}%{dest_port?, port %{dest_port#%{next?, }<var%{item.inv? data-tooltip="Match ports except %{item.val}."}>%{item.ival}</var>}}'), {
 		dest: E('span', { 'class': 'zonebadge', 'style': fwmodel.getZoneColorStyle(z) }, [(z == '*') ? E('em', _('any zone')) : (z ? E('strong', z) : E('em', _('this device')))]),
@@ -83,8 +83,8 @@ function rule_dest_txt(s) {
 }
 
 function rule_limit_txt(s) {
-	var m = String(uci.get('firewall', s, 'limit')).match(/^(\d+)\/([smhd])\w*$/i),
-	    l = m ? {
+	const m = String(uci.get('firewall', s, 'limit')).match(/^(\d+)\/([smhd])\w*$/i);
+	const l = m ? {
 			num:   +m[1],
 			unit:  ({ s: _('second'), m: _('minute'), h: _('hour'), d: _('day') })[m[2]],
 			burst: uci.get('firewall', s, 'limit_burst')
@@ -96,19 +96,19 @@ function rule_limit_txt(s) {
 	return fwtool.fmt(_('Limit matching to <var>%{limit.num}</var> packets per <var>%{limit.unit}</var>%{limit.burst? burst <var>%{limit.burst}</var>}'), { limit: l });
 }
 
-function rule_target_txt(s, ctHelpers) {
-	var t = uci.get('firewall', s, 'target'),
-	    h = (uci.get('firewall', s, 'set_helper') || '').toUpperCase(),
-	    s = {
-	    	target: t,
-	    	src:    uci.get('firewall', s, 'src'),
-	    	dest:   uci.get('firewall', s, 'dest'),
-	    	set_helper: h,
-	    	set_mark:   uci.get('firewall', s, 'set_mark'),
-	    	set_xmark:  uci.get('firewall', s, 'set_xmark'),
-	    	set_dscp:   uci.get('firewall', s, 'set_dscp'),
-	    	helper_name: (ctHelpers.filter(function(ctH) { return ctH.name.toUpperCase() == h })[0] || {}).description
-	    };
+function rule_target_txt(sid, ctHelpers) {
+	const t = uci.get('firewall', sid, 'target');
+	const h = (uci.get('firewall', sid, 'set_helper') || '').toUpperCase();
+	const s = {
+		target: t,
+		src:    uci.get('firewall', sid, 'src'),
+		dest:   uci.get('firewall', sid, 'dest'),
+		set_helper: h,
+		set_mark:   uci.get('firewall', sid, 'set_mark'),
+		set_xmark:  uci.get('firewall', sid, 'set_xmark'),
+		set_dscp:   uci.get('firewall', sid, 'set_dscp'),
+		helper_name: (ctHelpers.filter(function(ctH) { return ctH.name.toUpperCase() == h })[0] || {}).description
+	};
 
 	switch (t) {
 	case 'DROP':
@@ -150,7 +150,7 @@ return view.extend({
 		expect: { result: [] }
 	}),
 
-	load: function() {
+	load() {
 		return Promise.all([
 			this.callHostHints(),
 			this.callConntrackHelpers(),
@@ -158,25 +158,25 @@ return view.extend({
 		]);
 	},
 
-	render: function(data) {
+	render(data) {
 		if (fwtool.checkLegacySNAT())
 			return fwtool.renderMigration();
 		else
 			return this.renderRules(data);
 	},
 
-	renderRules: function(data) {
-		var hosts = data[0],
-		    ctHelpers = data[1],
-		    m, s, o;
+	renderRules([hosts, ctHelpers]) {
+		let m, s, o;
 
 		m = new form.Map('firewall', _('Firewall - Traffic Rules'),
-			_('Traffic rules define policies for packets traveling between different zones, for example to reject traffic between certain hosts or to open WAN ports on the router.'));
+			_('Traffic rules define policies for packets travelling between different zones, for example to reject traffic between certain hosts or to open WAN ports on the router.'));
 
 		s = m.section(form.GridSection, 'rule', _('Traffic Rules'));
 		s.addremove = true;
 		s.anonymous = true;
 		s.sortable  = true;
+		s.cloneable = true;
+		s.filterrow = true;
 
 		s.tab('general', _('General Settings'));
 		s.tab('advanced', _('Advanced Settings'));
@@ -191,19 +191,14 @@ return view.extend({
 		};
 
 		s.handleAdd = function(ev) {
-			var config_name = this.uciconfig || this.map.config,
-			    section_id = uci.add(config_name, this.sectiontype),
-			    opt1 = this.getOption('src'),
-			    opt2 = this.getOption('dest');
+			const config_name = this.uciconfig || this.map.config;
+			const section_id = uci.add(config_name, this.sectiontype);
 
-			opt1.default = 'wan';
-			opt2.default = 'lan';
+			uci.set(config_name, section_id, 'src', 'wan');
+			uci.set(config_name, section_id, 'dest', 'lan');
 
-			this.addedSection = section_id;
+			m.addedSection = section_id;
 			this.renderMoreOptionsModal(section_id);
-
-			delete opt1.default;
-			delete opt2.default;
 		};
 
 		o = s.taboption('general', form.Value, 'name', _('Name'));
@@ -230,14 +225,15 @@ return view.extend({
 		o = s.option(form.Flag, 'enabled', _('Enable'));
 		o.modalonly = false;
 		o.default = o.enabled;
+		o.rmempty = false;
 		o.editable = true;
 		o.tooltip = function(section_id) {
-			var weekdays = uci.get('firewall', section_id, 'weekdays');
-			var monthdays = uci.get('firewall', section_id, 'monthdays');
-			var start_time = uci.get('firewall', section_id, 'start_time');
-			var stop_time = uci.get('firewall', section_id, 'stop_time');
-			var start_date = uci.get('firewall', section_id, 'start_date');
-			var stop_date = uci.get('firewall', section_id, 'stop_date');
+			const weekdays = uci.get('firewall', section_id, 'weekdays');
+			const monthdays = uci.get('firewall', section_id, 'monthdays');
+			const start_time = uci.get('firewall', section_id, 'start_time');
+			const stop_time = uci.get('firewall', section_id, 'stop_time');
+			const start_date = uci.get('firewall', section_id, 'start_date');
+			const stop_date = uci.get('firewall', section_id, 'stop_date');
 
 			if (weekdays || monthdays || start_time || stop_time || start_date || stop_date )
 				return _('Time restrictions are enabled for this rule');
@@ -251,7 +247,7 @@ return view.extend({
 		o.value('in', _('Inbound device'));
 		o.value('out', _('Outbound device'));
 		o.cfgvalue = function(section_id) {
-			var val = uci.get('firewall', section_id, 'direction');
+			const val = uci.get('firewall', section_id, 'direction');
 			switch (val) {
 				case 'in':
 				case 'ingress':
@@ -294,30 +290,52 @@ return view.extend({
 		o.multiple = true;
 		o.custom = true;
 		o.cast = 'table';
-		o.placeholder = _('any');
-		o.value('', 'any');
+		o.placeholder = _('any/all');
 		o.value('address-mask-reply');
 		o.value('address-mask-request');
-		o.value('address-unreachable'); /* ipv6 */
-		o.value('bad-header');  /* ipv6 */
+		o.value('address-unreachable'); /* icmpv6 1:3 */
+		o.value('bad-header');  /* icmpv6 4:0 */
+		o.value('certification-path-solicitation-message'); /* icmpv6 148 */
+		o.value('certification-path-advertisement-message'); /* icmpv6 149 */
 		o.value('communication-prohibited');
 		o.value('destination-unreachable');
+		o.value('duplicate-address-request'); /* icmpv6 157 */
+		o.value('duplicate-address-confirmation'); /* icmpv6 158 */
 		o.value('echo-reply');
 		o.value('echo-request');
+		o.value('extended-echo-request'); /* icmpv6 160 */
+		o.value('extended-echo-reply'); /* icmpv6 161 */
+		o.value('fmipv6-message'); /* icmpv6 154 */
 		o.value('fragmentation-needed');
+		o.value('home-agent-address-discovery-reply-message'); /* icmpv6 145 */
+		o.value('home-agent-address-discovery-request-message'); /* icmpv6 144 */
 		o.value('host-precedence-violation');
 		o.value('host-prohibited');
 		o.value('host-redirect');
 		o.value('host-unknown');
 		o.value('host-unreachable');
+		o.value('ilnpv6-locator-update-message'); /* icmpv6 156 */
+		o.value('inverse-neighbour-discovery-advertisement-message'); /* icmpv6 142 */
+		o.value('inverse-neighbour-discovery-solicitation-message'); /* icmpv6 141 */
 		o.value('ip-header-bad');
+		o.value('mobile-prefix-advertisement'); /* icmpv6 147 */
+		o.value('mobile-prefix-solicitation'); /* icmpv6 146 */
+		o.value('mpl-control-message'); /* icmpv6 159 */
+		o.value('multicast-listener-query'); /* icmpv6 130 */
+		o.value('multicast-listener-report'); /* icmpv6 131 */
+		o.value('multicast-listener-done'); /* icmpv6 132 */
+		o.value('multicast-router-advertisement'); /* icmpv6 151 */
+		o.value('multicast-router-solicitation'); /* icmpv6 152 */
+		o.value('multicast-router-termination'); /* icmpv6 153 */
 		o.value('neighbour-advertisement');
 		o.value('neighbour-solicitation');
 		o.value('network-prohibited');
 		o.value('network-redirect');
 		o.value('network-unknown');
 		o.value('network-unreachable');
-		o.value('no-route');  /* ipv6 */
+		o.value('no-route'); /* icmpv6 1:0 */
+		o.value('node-info-query'); /* icmpv6 139 */
+		o.value('node-info-response'); /* icmpv6 140 */
 		o.value('packet-too-big');
 		o.value('parameter-problem');
 		o.value('port-unreachable');
@@ -326,7 +344,9 @@ return view.extend({
 		o.value('redirect');
 		o.value('required-option-missing');
 		o.value('router-advertisement');
+		o.value('router-renumbering'); /* icmpv6 138 */
 		o.value('router-solicitation');
+		o.value('rpl-control-message'); /* icmpv6 155 */
 		o.value('source-quench');
 		o.value('source-route-failed');
 		o.value('time-exceeded');
@@ -338,8 +358,9 @@ return view.extend({
 		o.value('TOS-network-unreachable');
 		o.value('ttl-zero-during-reassembly');
 		o.value('ttl-zero-during-transit');
-		o.value('unknown-header-type');  /* ipv6 */
-		o.value('unknown-option');  /* ipv6 */
+		o.value('v2-multicast-listener-report'); /* icmpv6 143 */
+		o.value('unknown-header-type'); /* icmpv6 4:1 */
+		o.value('unknown-option'); /* icmpv6 4:2 */
 		o.depends({ proto: 'icmp', '!contains': true });
 		o.depends({ proto: 'icmpv6', '!contains': true });
 
@@ -348,6 +369,14 @@ return view.extend({
 		o.nocreate = true;
 		o.allowany = true;
 		o.allowlocal = 'src';
+
+		o = s.taboption('advanced', form.Value, 'ipset', _('Use ipset'));
+		uci.sections('firewall', 'ipset', function(s) {
+			if (typeof(s.name) == 'string')
+				o.value(s.name, s.comment ? '%s (%s)'.format(s.name, s.comment) : s.name);
+		});
+		o.modalonly = true;
+		o.rmempty = true;
 
 		fwtool.addMACOption(s, 'advanced', 'src_mac', _('Source MAC address'), null, hosts);
 		fwtool.addIPOption(s, 'general', 'src_ip', _('Source address'), null, '', hosts, true);
@@ -377,6 +406,7 @@ return view.extend({
 		o = s.taboption('general', form.ListValue, 'target', _('Action'));
 		o.modalonly = true;
 		o.default = 'ACCEPT';
+		o.rmempty = false;
 		o.value('DROP', _('drop'));
 		o.value('ACCEPT', _('accept'));
 		o.value('REJECT', _('reject'));
@@ -386,8 +416,8 @@ return view.extend({
 		o.value('MARK_XOR', _('XOR firewall mark'));
 		o.value('DSCP', _('DSCP classification'));
 		o.cfgvalue = function(section_id) {
-			var t = uci.get('firewall', section_id, 'target'),
-			    m = uci.get('firewall', section_id, 'set_mark');
+			const t = uci.get('firewall', section_id, 'target');
+			const m = uci.get('firewall', section_id, 'set_mark');
 
 			if (t == 'MARK')
 				return m ? 'MARK_SET' : 'MARK_XOR';
@@ -406,22 +436,22 @@ return view.extend({
 		o.modalonly = true;
 		o.placeholder = _('any');
 		o.depends('target', 'HELPER');
-		for (var i = 0; i < ctHelpers.length; i++)
-			o.value(ctHelpers[i].name, '%s (%s)'.format(ctHelpers[i].description, ctHelpers[i].name.toUpperCase()));
+		for (let cth of ctHelpers)
+			o.value(cth.name, '%s (%s)'.format(cth.description, cth.name.toUpperCase()));
 
 		o = s.taboption('advanced', form.Value, 'helper', _('Match helper'), _('Match traffic using the specified connection tracking helper.'));
 		o.modalonly = true;
 		o.placeholder = _('any');
-		for (var i = 0; i < ctHelpers.length; i++)
-			o.value(ctHelpers[i].name, '%s (%s)'.format(ctHelpers[i].description, ctHelpers[i].name.toUpperCase()));
+		for (let cth of ctHelpers)
+			o.value(cth.name, '%s (%s)'.format(cth.description, cth.name.toUpperCase()));
 		o.validate = function(section_id, value) {
 			if (value == '' || value == null)
 				return true;
 
 			value = value.replace(/^!\s*/, '');
 
-			for (var i = 0; i < ctHelpers.length; i++)
-				if (value == ctHelpers[i].name)
+			for (let cth of ctHelpers)
+				if (value == cth.name)
 					return true;
 
 			return _('Unknown or not installed conntrack helper "%s"').format(value);
@@ -431,6 +461,14 @@ return view.extend({
 		fwtool.addDSCPOption(s, false);
 		fwtool.addLimitOption(s);
 		fwtool.addLimitBurstOption(s);
+
+		o = s.taboption('advanced', form.Flag, 'log', _('Enable logging'), _('Log matched packets to syslog.'));
+		o.modalonly = true;
+
+		o = s.taboption('advanced', form.Value, 'log_limit', _('Limit log messages'));
+		o.depends('log', '1');
+		o.placeholder = '10/minute';
+		o.modalonly = true;
 
 		if (!L.hasSystemFeature('firewall4')) {
 			o = s.taboption('advanced', form.Value, 'extra', _('Extra arguments'),
@@ -462,7 +500,7 @@ return view.extend({
 		o.write = function(section_id, value) {
 			return this.super('write', [ section_id, L.toArray(value).join(' ') ]);
 		};
-		for (var i = 1; i <= 31; i++)
+		for (let i = 1; i <= 31; i++)
 			o.value(i);
 
 		o = s.taboption('timed', form.Value, 'start_time', _('Start Time (hh:mm:ss)'));

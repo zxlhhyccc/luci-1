@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2020-07-11 21:29+0000\n"
-"Last-Translator: ssantos <ssantos@web.de>\n"
+"PO-Revision-Date: 2026-03-23 18:11+0000\n"
+"Last-Translator: Werner Schleifer <werner.schleifer@gmail.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationsser2net/de/>\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.2-dev\n"
+"X-Generator: Weblate 5.17-dev\n"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:72
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:71
@@ -64,7 +64,7 @@ msgstr "Aktiviert"
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:60
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:59
 msgid "Even"
-msgstr "gleich"
+msgstr "Gerade"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:73
 msgid "Extra options"
@@ -76,7 +76,7 @@ msgstr "Globaler Schalter"
 
 #: applications/luci-app-ser2net/root/usr/share/rpcd/acl.d/luci-app-ser2net.json:3
 msgid "Grant access to LuCI app ser2net"
-msgstr "Gewähre UCI Zugriff auf LuCI-App ser2net"
+msgstr "Zugriff auf LuCI-App ser2net gewähren"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:71
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:70

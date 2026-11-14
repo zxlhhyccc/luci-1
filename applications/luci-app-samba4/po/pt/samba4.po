@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2009-05-26 19:03+0200\n"
-"PO-Revision-Date: 2020-11-01 08:19+0000\n"
+"PO-Revision-Date: 2024-07-20 20:09+0000\n"
 "Last-Translator: ssantos <ssantos@web.de>\n"
 "Language-Team: Portuguese <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationssamba4/pt/>\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.3.2-dev\n"
+"X-Generator: Weblate 5.7-dev\n"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:120
 msgid "Allow guests"
@@ -114,7 +114,7 @@ msgstr "Configurações gerais"
 
 #: applications/luci-app-samba4/root/usr/share/rpcd/acl.d/luci-app-samba4.json:3
 msgid "Grant access to LuCI app samba4"
-msgstr "Conceder acesso à app LuCI samba4"
+msgstr "Conceder acesso à app samba4 do LuCI"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:126
 msgid "Guests only"
@@ -143,8 +143,8 @@ msgstr "Partilhas da Rede"
 
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:62
 msgid ""
-"On lower-end devices may increase speeds, by forceing synchronous I/O "
-"instead of the default asynchronous."
+"On lower-end devices may increase speeds, by forcing synchronous I/O instead "
+"of the default asynchronous."
 msgstr ""
 "Em aparelhos de extremidade inferior podem aumentar as velocidades, forçando "
 "a E/S síncrona em vez da assíncrona padrão."
@@ -192,30 +192,3 @@ msgstr "Objetos Vfs"
 #: applications/luci-app-samba4/htdocs/luci-static/resources/view/samba4.js:51
 msgid "Workgroup"
 msgstr "Grupo de trabalho"
-
-#~ msgid ""
-#~ "Allow system users to reach their home directories via network shares"
-#~ msgstr ""
-#~ "Utilizadores do sistema poderão aceder ao seu directório home através das "
-#~ "partilhas de rede"
-
-#~ msgid "Hostname"
-#~ msgstr "Nome do Host"
-
-#~ msgid "Share home-directories"
-#~ msgstr "Partilha de directórios home"
-
-#~ msgid "Mask for new directories"
-#~ msgstr "Máscara para novos directórios"
-
-#~ msgid "Mask for new files"
-#~ msgstr "Máscara para novos ficheiros"
-
-#~ msgid "Shared Directory"
-#~ msgstr "Diretório Compartilhado"
-
-#~ msgid "Physical Path"
-#~ msgstr "Caminho Físico"
-
-#~ msgid "optional"
-#~ msgstr "opcional"

@@ -2,8 +2,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2022-06-27 00:17+0000\n"
-"Last-Translator: Wellington Terumi Uemura <wellingtonuemura@gmail.com>\n"
+"PO-Revision-Date: 2026-11-09 02:53+0000\n"
+"Last-Translator: Janderson Vieira Santos "
+"<ritew@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/"
 "openwrt/luciapplicationsaria2/pt_BR/>\n"
 "Language: pt_BR\n"
@@ -11,7 +12,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.13.1-dev\n"
+"X-Generator: Weblate 2026.11.2.dev0\n"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:433
 msgid "<abbr title=\"Local Peer Discovery\">LPD</abbr> enabled"
@@ -69,7 +70,7 @@ msgstr "Porta de escuta do BitTorrent"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:329
 msgid "CA certificate"
-msgstr "Certificado CA"
+msgstr "Certificado do CA"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:334
 msgid "Certificate"
@@ -171,7 +172,7 @@ msgstr "Ativar o cache de disco (em bytes), defina como 0 para desativá-lo."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:220
 msgid "Enable logging"
-msgstr "Habilite os registros (log)"
+msgstr "Ativar registro de logs"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:442
 msgid "Enable peer exchange"
@@ -273,7 +274,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:231
 msgid "Info"
-msgstr "Informação"
+msgstr "Informações"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:41
 msgid "Installed web interface:"
@@ -305,8 +306,8 @@ msgstr "Lista dos rastreadores BitTorrent adicionais com anúncio URI."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:625
 msgid ""
-"List of extra settings. Format: option=value, eg. <code>netrc-path=/tmp/."
-"netrc</code>."
+"List of extra settings. Format: option=value, eg. <code>netrc-path=/"
+"tmp/.netrc</code>."
 msgstr ""
 "Lista de configurações extras. Formato: option=value, por exemplo "
 "<code>netrc-path=/tmp/.netrc</code>."
@@ -317,7 +318,7 @@ msgstr "Carregando"
 
 #: applications/luci-app-aria2/root/usr/share/luci/menu.d/luci-app-aria2.json:33
 msgid "Log"
-msgstr "Log"
+msgstr "Registro"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/log.js:58
 msgid "Log Data"
@@ -329,7 +330,7 @@ msgstr "Arquivo log"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:228
 msgid "Log level"
-msgstr "Nível do registro do log"
+msgstr "Nível do registro"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:377
 msgid "Lowest speed limit"
@@ -394,7 +395,7 @@ msgstr "Nenhum"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:232
 msgid "Notice"
-msgstr "Aviso"
+msgstr "Notificação"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:242
 msgid "Pause"
@@ -422,7 +423,7 @@ msgstr "Prefixo de identificação do paceiro"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:341
 msgid "Private key"
-msgstr "Chave Privada"
+msgstr "Chave privada"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:317
 msgid "Proxy password"
@@ -590,8 +591,8 @@ msgid ""
 "you can add Cache-Control header with a directive you like using \"Header\" "
 "option."
 msgstr ""
-"Envie os cabeçalhos <code> Cache-Control: no-cache </code> e <code> Pragma: "
-"no-cache </code> para evitar a cache de conteúdo. Se desativado, estes "
+"Enviar cabeçalho <code>Cache-Control: no-cache</code> e <code>Pragma: no-"
+"cache</code> para evitar conteúdo armazenado em cache. Se desativado, estes "
 "cabeçalhos não são enviados e você pode adicionar o cabeçalho Cache-Control "
 "com uma diretiva que você gosta usando a opção \"Cabeçalho\"."
 
@@ -674,12 +675,12 @@ msgstr "Lista de configurações"
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:585
 msgid ""
 "Specify file allocation method. If you are using newer file systems such as "
-"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), \"falloc"
-"\" is your best choice. It allocates large(few GiB) files almost instantly, "
-"but it may not be available if your system doesn't have posix_fallocate(3) "
-"function. Don't use \"falloc\" with legacy file systems such as ext3 and "
-"FAT32 because it takes almost same time as \"prealloc\" and it blocks aria2 "
-"entirely until allocation finishes."
+"ext4 (with extents support), btrfs, xfs or NTFS (MinGW build only), "
+"\"falloc\" is your best choice. It allocates large(few GiB) files almost "
+"instantly, but it may not be available if your system doesn't have "
+"posix_fallocate(3) function. Don't use \"falloc\" with legacy file systems "
+"such as ext3 and FAT32 because it takes almost same time as \"prealloc\" and "
+"it blocks aria2 entirely until allocation finishes."
 msgstr ""
 "Especifique o método de alocação de arquivo. Se você está usando sistemas de "
 "arquivos mais novos, como ext4 (com suporte a extents), btrfs, xfs ou NTFS "
@@ -704,9 +705,9 @@ msgid ""
 "with this option, seeding ends when at least one of the conditions is "
 "satisfied. Specifying 0 disables seeding after download completed."
 msgstr ""
-"Especifique o tempo de semeadura em minutos. Se a opção \"Relação de sementes"
-"\" for especificada em conjunto com esta, a semeadura termina quando pelo "
-"menos uma das condições for satisfeita. Ao definir como 0 desativa a "
+"Especifique o tempo de semeadura em minutos. Se a opção \"Relação de "
+"sementes\" for especificada em conjunto com esta, a semeadura termina quando "
+"pelo menos uma das condições for satisfeita. Ao definir como 0 desativa a "
 "semeadura após a conclusão do download."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:539
@@ -798,7 +799,7 @@ msgstr "Token"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:486
 msgid "True"
-msgstr "Verdade"
+msgstr "Verdadeiro"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:310
 msgid "Use a proxy server for all protocols."
@@ -877,7 +878,7 @@ msgstr ""
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:233
 msgid "Warn"
-msgstr "Atenção"
+msgstr "Aviso"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:381
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:493
@@ -891,155 +892,12 @@ msgstr "Você pode anexar K ou M."
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:594
 msgid "falloc"
-msgstr "alocação de arquivo"
+msgstr "falloc"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:592
 msgid "prealloc"
-msgstr "Pré-alocado"
+msgstr "prealloc"
 
 #: applications/luci-app-aria2/htdocs/luci-static/resources/view/aria2/config.js:593
 msgid "trunc"
-msgstr "quebra de linha"
-
-#~ msgid "Empty file."
-#~ msgstr "Arquivo vazio."
-
-#~ msgid "Error: Can't find aria2c in PATH, please reinstall aria2."
-#~ msgstr ""
-#~ "Erro: Não foi possível encontrar o aria2c no PATH, por favor, reinstale o "
-#~ "aria2c."
-
-#~ msgid "Failed to load log data."
-#~ msgstr "Falha ao carregar os dados do log."
-
-#~ msgid "File does not exist."
-#~ msgstr "O arquivo não existe."
-
-#~ msgid "For more information, please visit: %s"
-#~ msgstr "Para mais informações, visite: %s"
-
-#~ msgid "Refresh every 10 seconds."
-#~ msgstr "Atualizar a cada 10 segundos."
-
-#~ msgid "Show URL"
-#~ msgstr "Mostrar URL"
-
-#~ msgid "Use WebSocket"
-#~ msgstr "Use WebSockets"
-
-#~ msgid "\"Falloc\" is not available in all cases."
-#~ msgstr "\"Falloc\" não está disponível em todas as classes."
-
-#~ msgid "<abbr title=\"Distributed Hash Table\">DHT</abbr> enabled"
-#~ msgstr ""
-#~ "<abbr title=\"Distributed Hash Table/Tabla de disperção distribuída"
-#~ "\">DHT</abbr> habilitado"
-
-#~ msgid "Additional Bt tracker enabled"
-#~ msgstr "Rastreadores BitTorrent adicionais habilitado"
-
-#~ msgid "Aria2 Settings"
-#~ msgstr "Configurações do Aria2"
-
-#~ msgid "Aria2 Status"
-#~ msgstr "Estado do Aria2"
-
-#~ msgid ""
-#~ "Aria2 is a multi-protocol &amp; multi-source download utility, here you "
-#~ "can configure the settings."
-#~ msgstr ""
-#~ "Aria2 é um utilitário de transferência multi-protocolo de múltiplas "
-#~ "fontes, aqui você pode configurá-lo."
-
-#~ msgid "Autosave session interval"
-#~ msgstr "Intervalo para autossalvamento da sessão"
-
-#~ msgid "BitTorrent Settings"
-#~ msgstr "Configurações do BitTorrent"
-
-#~ msgid "Default download directory"
-#~ msgstr "Diretório padrão de arquivos baixados"
-
-#~ msgid "Enable log"
-#~ msgstr "Habilitar registros"
-
-#~ msgid "Falloc"
-#~ msgstr "Falloc"
-
-#~ msgid "Files and Locations"
-#~ msgstr "Arquivos e Locais"
-
-#~ msgid "General Settings"
-#~ msgstr "Configurações Gerais"
-
-#~ msgid "List of additional Bt tracker"
-#~ msgstr "Lista de rastreadores BitTorrent adicionais"
-
-#~ msgid "List of extra settings"
-#~ msgstr "Lista de configurações adicionais"
-
-#~ msgid "Max number of peers per torrent"
-#~ msgstr "Numero máximo de parceiros por torrent"
-
-#~ msgid "Off"
-#~ msgstr "Desligado"
-
-#~ msgid "Open WebUI-Aria2"
-#~ msgstr "Abrir WebUI-Aria2"
-
-#~ msgid "Open YAAW"
-#~ msgstr "Abrir YAAW"
-
-#~ msgid "Overall download limit"
-#~ msgstr "Limite global para baixar"
-
-#~ msgid "Overall speed limit enabled"
-#~ msgstr "Limite da taxa de transferência global habilitado"
-
-#~ msgid "Overall upload limit"
-#~ msgstr "Limite global para subir"
-
-#~ msgid "Per task download limit"
-#~ msgstr "Limite por tarefa para baixar"
-
-#~ msgid "Per task speed limit enabled"
-#~ msgstr "Limite da taxa de transferência por tarefa habilitado"
-
-#~ msgid "Per task upload limit"
-#~ msgstr "Limite por tarefa para subir"
-
-#~ msgid "Prealloc"
-#~ msgstr "Pré-alocação"
-
-#~ msgid "Preallocation"
-#~ msgstr "Pré-alocação"
-
-#~ msgid "RPC Token"
-#~ msgstr ""
-#~ "Chave eletrônica do <abbr title=\"Remote Procedure Call/Chamada de "
-#~ "Procedimento Remoto\">RPC</abbr>"
-
-#~ msgid "Sec"
-#~ msgstr "Segurança"
-
-#~ msgid "Task Settings"
-#~ msgstr "Configurações das tarefas"
-
-#~ msgid "Trunc"
-#~ msgstr "Truncar"
-
-#~ msgid "User agent value"
-#~ msgstr "Valor da identificação do agente do usuário"
-
-#~ msgid "View Json-RPC URL"
-#~ msgstr "Visualizar URL do JSON-RPC"
-
-#~ msgid "in bytes, You can append K or M."
-#~ msgstr "em bytes. Você pode sufixar com K (quilo) ou M (mega)."
-
-#~ msgid "in bytes/sec, You can append K or M."
-#~ msgstr "em bytes por segundo. Você pode sufixar com K (quilo) ou M (mega)."
-
-#~ msgid "Log file is in the config file dir."
-#~ msgstr ""
-#~ "Arquivo de registro (log) está no diretório do arquivo de configuração."
+msgstr "trunc"

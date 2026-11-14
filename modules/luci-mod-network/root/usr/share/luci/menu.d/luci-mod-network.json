@@ -46,6 +46,24 @@
 		}
 	},
 
+	"admin/network/switch-vlan": {
+		"title": "Switch/VLAN config",
+		"order": 12,
+		"action": {
+			"type": "view",
+			"path": "network/switch-vlan"
+		},
+		"depends": {
+			"acl": [ "luci-mod-network-config" ],
+			"uci": [
+				{ "network": { "@device": { "type": "bridge", "name": "switch", "vlan_filtering": "1" } } },
+				{ "network": { "@device": { "type": "bridge", "name": "switch" }, "@bridge-vlan": { "device": "switch" } } },
+				{ "network": { "@device": { "type": "bridge", "vlan_filtering": "1" } } },
+				{ "network": { "@bridge-vlan": true } }
+			]
+		}
+	},
+
 	"admin/network/routes": {
 		"title": "Routing",
 		"order": 30,
@@ -59,7 +77,7 @@
 	},
 
 	"admin/network/dhcp": {
-		"title": "DHCP and DNS",
+		"title": "DHCP",
 		"order": 40,
 		"action": {
 			"type": "view",
@@ -67,6 +85,23 @@
 		},
 		"depends": {
 			"acl": [ "luci-mod-network-dhcp" ],
+			"fs": [
+				{ "/usr/sbin/odhcpd": "executable" },
+				{ "/usr/sbin/dnsmasq": "executable" }
+			],
+			"uci": { "dhcp": true }
+		}
+	},
+
+	"admin/network/dns": {
+		"title": "DNS",
+		"order": 45,
+		"action": {
+			"type": "view",
+			"path": "network/dns"
+		},
+		"depends": {
+			"acl": [ "luci-mod-network-dns" ],
 			"fs": { "/usr/sbin/dnsmasq": "executable" },
 			"uci": { "dhcp": true }
 		}

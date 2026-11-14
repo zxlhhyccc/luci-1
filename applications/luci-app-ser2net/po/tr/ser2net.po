@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-02-27 04:56+0000\n"
-"Last-Translator: semih <semiht@gmail.com>\n"
+"PO-Revision-Date: 2026-10-13 13:19+0000\n"
+"Last-Translator: Pavel Borecki <pavelbo@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationsser2net/tr/>\n"
 "Language: tr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.11.1-dev\n"
+"X-Generator: Weblate 2026.11.dev0\n"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:72
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:71
@@ -45,7 +45,7 @@ msgstr "Varsayılan ayarlar"
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/leds.js:19
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:34
 msgid "Device"
-msgstr "Cihaz"
+msgstr "Aygıt"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/leds.js:15
 msgid "Driver"
@@ -59,7 +59,7 @@ msgstr "Süre"
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:15
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:22
 msgid "Enabled"
-msgstr "Etkin"
+msgstr "Etkinleştirildi"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:60
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:59
@@ -94,7 +94,7 @@ msgstr "LED'ler"
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:59
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:58
 msgid "None"
-msgstr "Yok"
+msgstr "Hiçbiri"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:61
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:60
@@ -166,12 +166,12 @@ msgid ""
 "The amount of seconds of inactivity before a disconnect occurs.<br/>A value "
 "of zero means wait indefinitely."
 msgstr ""
-"Bağlantı kesilmeden önceki saniye cinsinden işlemsizlik süresi.<br/> Sıfır "
+"Bağlantı kesilmeden önceki saniye cinsinden işlemsizlik süresi.<br/>Sıfır "
 "değeri, sonsuza kadar beklemek anlamına gelir."
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/leds.js:19
 msgid "The device itself."
-msgstr "Cihazın kendisi."
+msgstr "Aygıtın kendisi."
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/leds.js:15
 msgid "The driver required for the device."

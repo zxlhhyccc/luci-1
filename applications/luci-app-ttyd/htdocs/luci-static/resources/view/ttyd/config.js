@@ -5,7 +5,7 @@
 
 return view.extend({
 	render: function() {
-		var m, s, o;
+		let m, s, o;
 
 		m = new form.Map('ttyd');
 
@@ -17,13 +17,22 @@ return view.extend({
 		o = s.option(form.Flag, 'enable', _('Enable'));
 		o.default = true;
 
+		s.option(form.Flag, 'unix_sock', _('UNIX socket'), _('Bind to UNIX domain socket instead of IP port'));
+
 		o = s.option(form.Value, 'port', _('Port'), _('Port to listen (default: 7681, use `0` for random port)'));
+		o.depends('unix_sock', '0');
 		o.datatype    = 'port';
 		o.placeholder = 7681;
 
-		o = s.option(widgets.DeviceSelect, 'interface', _('Interface'), _('Network interface to bind (eg: eth0), or UNIX domain socket path (eg: /var/run/ttyd.sock)'));
+		o = s.option(widgets.DeviceSelect, 'interface', _('Interface'), _('Network interface to bind (eg: eth0)'));
+		o.depends('unix_sock', '0');
 		o.nocreate    = true;
-		o.unspecified = true;
+		o.includeips = true;
+
+		o = s.option(form.Value, '_unix_sock_path', _('UNIX socket path'), _('UNIX domain socket path (eg: /var/run/ttyd.sock)'));
+		o.depends('unix_sock', '1');
+		o.ucioption = 'interface';
+		o.retain = true;
 
 		o = s.option(form.Value, 'credential', _('Credential'), _('Credential for Basic Authentication'));
 		o.placeholder = 'username:password';
@@ -37,7 +46,7 @@ return view.extend({
 		o = s.option(form.Value, 'signal', _('Signal'), _('Signal to send to the command when exit it (default: 1, SIGHUP)'));
 		o.datatype = 'uinteger';
 
-		s.option(form.Flag, 'url_arg', _('Allow URL args'), _('Allow client to send command line arguments in URL (eg: http://localhost:7681?arg=foo&arg=bar)'));
+		s.option(form.Flag, 'url_arg', _('Allow URL args'), _('Allow client to send command line arguments in URL (eg: %s)'.format('http://localhost:7681?arg=foo&arg=bar')));
 
 		s.option(form.Flag, 'readonly', _('Read-only'), _('Do not allow clients to write to the TTY'));
 
@@ -55,7 +64,7 @@ return view.extend({
 
 		s.option(form.Flag, 'once', _('Once'), _('Accept only one client and exit on disconnection'));
 
-		o = s.option(form.Value, 'index', _('Index'), _('Custom index.html path'));
+		s.option(form.Value, 'index', _('Index'), _('Custom index.html path'));
 
 		s.option(form.Flag, 'ipv6', _('IPv6'), _('Enable IPv6 support'));
 
@@ -78,6 +87,11 @@ return view.extend({
 		o.default = '7';
 
 		s.option(form.Value, 'command', _('Command'));
+
+		s.option(form.Value, 'url_override', _('URL override'),
+			_('Override URL in Terminal tab. For use with reverse proxy.') + '<br />' +
+			_('Note that reverse proxied pages is NOT protected by password like LuCI.') + '<br />' +
+			_('Make sure to set up another authorization method.'));
 
 		return m.render();
 	}

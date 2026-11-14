@@ -6,7 +6,7 @@
 'require form';
 'require tools.widgets as widgets';
 
-var callServiceList = rpc.declare({
+const callServiceList = rpc.declare({
 	object: 'service',
 	method: 'list',
 	params: [ 'name' ],
@@ -37,7 +37,7 @@ return view.extend({
 		if (running && webinstalled)
 			button = '&#160;<a class="btn" href="http://' + window.location.hostname + ':' + port + '" target="_blank" rel="noreferrer noopener">' + _('Open Web Interface') + '</a>';
 
-		var m, s, o;
+		let m, s, o;
 
 		m = new form.Map('transmission', 'Transmission', _('Transmission daemon is a simple bittorrent client, here you can configure the settings.') + button);
 
@@ -176,7 +176,7 @@ return view.extend({
 		o = s.option(form.Value, 'bind_address_ipv6', _('Binding address IPv6'));
 
 		o = s.option(form.Value, 'peer_congestion_algorithm', _('Peer congestion algorithm'),
-			_('This is documented on <a href="https://www.irif.fr/~jch/software/bittorrent/tcp-congestion-control.html" target="_blank" rel="noreferrer noopener">tcp-congestion-control</a>.'));
+			_('This is documented on %s.'.format('<a href="https://www.irif.fr/~jch/software/bittorrent/tcp-congestion-control.html" target="_blank" rel="noreferrer noopener">tcp-congestion-control</a>')));
 
 		o = s.option(form.Value, 'peer_id_ttl_hours', _('Recycle peer id after'), _('hours'));
 

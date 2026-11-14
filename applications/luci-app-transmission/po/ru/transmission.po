@@ -2,17 +2,18 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LuCI: transmission\n"
 "POT-Creation-Date: 2012-08-15 17:35+0300\n"
-"PO-Revision-Date: 2022-06-18 09:18+0000\n"
-"Last-Translator: AHOHNMYC <lqwh2h2cwa@protonmail.com>\n"
+"PO-Revision-Date: 2026-09-04 23:51+0000\n"
+"Last-Translator: SnIPeRSnIPeR <snipersniper@users.noreply.hosted.weblate.org>"
+"\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationstransmission/ru/>\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
-"X-Generator: Weblate 4.13-dev\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Weblate 2026.9.1.dev0\n"
 "Project-Info: Это технический перевод, не дословный. Главное-удобный русский "
 "интерфейс, все проверялось в графическом режиме, совместим с другими apps\n"
 
@@ -62,15 +63,15 @@ msgstr "Используемый IPv6-адрес"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:86
 msgid "Block list enabled"
-msgstr "Чёрный список включен"
+msgstr "Список блокировок включён"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:89
 msgid "Blocklist URL"
-msgstr "Ссылка для загрузки чёрного списка"
+msgstr "Ссылка для загрузки списка блокировок"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:83
 msgid "Blocklists"
-msgstr "Чёрный список"
+msgstr "Списки блокировок"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:131
 msgid "Cache size in MB"
@@ -78,7 +79,7 @@ msgstr "Размер кэша в МБ"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:50
 msgid "Config file directory"
-msgstr "Каталог расположения сonfig файла"
+msgstr "Каталог расположения сonfig-файла"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:53
 msgid "Custom Web UI directory"
@@ -86,7 +87,7 @@ msgstr "Каталог расположения пользовательског
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:133
 msgid "DHT enabled"
-msgstr "DHT включен"
+msgstr "DHT включён"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:151
 msgid "Debug"
@@ -138,11 +139,11 @@ msgstr "Общее ограничение кол-ва пиров"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:44
 msgid "Global settings"
-msgstr "Общие настройки"
+msgstr "Глобальные настройки"
 
 #: applications/luci-app-transmission/root/usr/share/rpcd/acl.d/luci-app-transmission.json:3
 msgid "Grant UCI access for luci-app-transmission"
-msgstr "Предоставить UCI доступ для luci-app-transmission"
+msgstr "Предоставить доступ к UCI для luci-app-transmission"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:289
 msgid "Idle seeding limit"
@@ -158,7 +159,7 @@ msgstr "Каталог для не полностью загруженных ф�
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:99
 msgid "Incomplete directory enabled"
-msgstr "Каталог для не полностью загруженных файлов включен"
+msgstr "Каталог для не полностью загруженных файлов включён"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:150
 msgid "Info"
@@ -166,7 +167,7 @@ msgstr "Информация"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:144
 msgid "LPD enabled"
-msgstr "LPD включен"
+msgstr "LPD включён"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:141
 msgid "Lazy bitfield enabled"
@@ -182,7 +183,7 @@ msgstr "Дополнительно"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:148
 msgid "None"
-msgstr "Ничего"
+msgstr "Отсутствует"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:283
 msgid ""
@@ -191,12 +192,12 @@ msgid ""
 "8, Thursday - 16, Friday - 32, Saturday - 64"
 msgstr ""
 "Число (битовая маска). Начните с 0, затем для каждого дня недели, в который "
-"вы хотите включить планировщик, добавьте: для воскресенья - 1, понедельника -"
-" 2, вторника - 4, среды - 8, четверга - 16, пятницы - 32, субботы - 64"
+"вы хотите включить планировщик, добавьте: для воскресенья - 1, понедельника "
+"- 2, вторника - 4, среды - 8, четверга - 16, пятницы - 32, субботы - 64"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:106
 msgid "Off"
-msgstr "Выключено"
+msgstr "Выключена"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:38
 msgid "Open Web Interface"
@@ -204,7 +205,7 @@ msgstr "Открыть веб-интерфейс"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:153
 msgid "PEX enabled"
-msgstr "PEX включен"
+msgstr "PEX включён"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:190
 msgid "Peer Port settings"
@@ -260,7 +261,7 @@ msgstr "Предпочтительно без шифрования"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:156
 msgid "Prefetch enabled"
-msgstr "Включен предварительный резерв места на носителе"
+msgstr "Включён предварительный резерв места на носителе"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:214
 msgid "Queue stalled enabled"
@@ -276,51 +277,51 @@ msgstr "Формирование очереди"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:242
 msgid "RPC URL"
-msgstr "URL ссылка для доступа к удаленному управлению (RPC)"
+msgstr "URL-ссылка для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:259
 msgid "RPC authentication required"
-msgstr "Требуется аутентификация для доступа к удаленному управлению (RPC)"
+msgstr "Требуется аутентификация для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:236
 msgid "RPC bind address"
-msgstr "Адрес для доступа к удаленному управлению (RPC)"
+msgstr "Адрес для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:233
 msgid "RPC enabled"
-msgstr "Удаленное управление (RPC) включено"
+msgstr "Удалённое управление (RPC) включено"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:249
 msgid "RPC host whitelist"
-msgstr "Белый список IP-адресов для доступа к удаленному управлению (RPC)"
+msgstr "Список разрешённых хостов для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:245
 msgid "RPC host whitelist enabled"
-msgstr "Белый список IP-адресов для удаленного управления (RPC) включен"
+msgstr "Список разрешённых хостов для удалённого управления (RPC) включён"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:266
 msgid "RPC password"
-msgstr "Пароль для доступа к удаленному управлению (RPC)"
+msgstr "Пароль для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:239
 msgid "RPC port"
-msgstr "Порт для доступа к удаленному управлению (RPC)"
+msgstr "Порт для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:230
 msgid "RPC settings"
-msgstr "Настройка доступа к удаленному управлению (RPC)"
+msgstr "Настройка доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:263
 msgid "RPC username"
-msgstr "Логин для доступа к удаленному управлению (RPC)"
+msgstr "Логин для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:256
 msgid "RPC whitelist"
-msgstr "Белый список IP-адресов для доступа к удаленному управлению (RPC)"
+msgstr "Список разрешённых IP-адресов для доступа к удалённому управлению (RPC)"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:252
 msgid "RPC whitelist enabled"
-msgstr "Белый список IP-адресов для удаленного управления (RPC) включен"
+msgstr "Список разрешённых IP-адресов для удалённого управления (RPC) включён"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:295
 msgid "Ratio limit"
@@ -332,7 +333,7 @@ msgstr "Ограничение отношения отданного к скач
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:181
 msgid "Recycle peer id after"
-msgstr "Рециркулирует ID узла после"
+msgstr "Обновлять идентификатор пира через"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:110
 msgid "Rename partial files"
@@ -391,14 +392,8 @@ msgid "Speed limit up enabled"
 msgstr "Ограничение скорости раздачи включено"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:179
-msgid ""
-"This is documented on <a href=\"https://www.irif.fr/~jch/software/bittorrent/"
-"tcp-congestion-control.html\" target=\"_blank\" rel=\"noreferrer noopener"
-"\">tcp-congestion-control</a>."
-msgstr ""
-"Это документировано на странице <a href=\"https://www.irif.fr/~jch/software/"
-"bittorrent/tcp-congestion-control.html\" target=\"_blank\" rel=\"noreferrer "
-"noopener\">tcp-congestion-control</a>."
+msgid "This is documented on %s."
+msgstr "Документация: %s."
 
 #: applications/luci-app-transmission/root/usr/share/luci/menu.d/luci-app-transmission.json:3
 msgid "Transmission"
@@ -409,7 +404,7 @@ msgid ""
 "Transmission daemon is a simple bittorrent client, here you can configure "
 "the settings."
 msgstr ""
-"Демон Transmission — это простой bittorrent-клиент. Здесь вы сможете его "
+"Демон Transmission — это простой bittorrent-клиент. Здесь можно его "
 "настроить.<br />Установить пакеты веб-интерфейса недостаточно, выберите и "
 "установите необходимый для работы пакет демона transmission-daemon-openssl "
 "или transmission-daemon-mbedtls."
@@ -428,7 +423,8 @@ msgstr "Каталог отслеживания демоном торрент-ф
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:274
 msgid "When enabled, this will toggle the <b>alt-speed-enabled</b> setting"
-msgstr "При включении значение параметра <b>alt-speed-enabled</b> переключается"
+msgstr ""
+"При включении значение параметра <b>alt-speed-enabled</b> переключается"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:181
 msgid "hours"
@@ -441,10 +437,13 @@ msgstr "в минутах от полуночи"
 
 #: applications/luci-app-transmission/htdocs/luci-static/resources/view/transmission.js:167
 msgid "uTP enabled"
-msgstr "uTP включен"
+msgstr "uTP включён"
 
-#~ msgid "Forced"
-#~ msgstr "Обязательно"
-
-#~ msgid "Peer socket tos"
-#~ msgstr "Значение ToS сокета пира"
+#~ msgid ""
+#~ "This is documented on <a href=\"https://www.irif.fr/~jch/software/"
+#~ "bittorrent/tcp-congestion-control.html\" target=\"_blank\" "
+#~ "rel=\"noreferrer noopener\">tcp-congestion-control</a>."
+#~ msgstr ""
+#~ "Это документировано на странице <a href=\"https://www.irif.fr/~jch/"
+#~ "software/bittorrent/tcp-congestion-control.html\" target=\"_blank\" "
+#~ "rel=\"noreferrer noopener\">tcp-congestion-control</a>."

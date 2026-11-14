@@ -1,14 +1,15 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2021-08-12 12:55+0000\n"
-"Last-Translator: Tudós Péter <tudi.sk@gmail.com>\n"
+"PO-Revision-Date: 2026-11-05 07:54+0000\n"
+"Last-Translator: Kövecses József <kovecses@users.noreply.hosted.weblate.org>"
+"\n"
 "Language-Team: Hungarian <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationsser2net/hu/>\n"
 "Language: hu\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.8-dev\n"
+"X-Generator: Weblate 2026.11.1.dev0\n"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:72
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:71
@@ -76,7 +77,7 @@ msgstr "Globális kapcsoló"
 
 #: applications/luci-app-ser2net/root/usr/share/rpcd/acl.d/luci-app-ser2net.json:3
 msgid "Grant access to LuCI app ser2net"
-msgstr ""
+msgstr "Hozzáférés engedélyezése a <em>ser2net</em> LuCI alkalmazáshoz"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:71
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:70
@@ -112,7 +113,7 @@ msgstr "Paritás"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:22
 msgid "Protocol"
-msgstr "Protokol"
+msgstr "Protokoll"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:11
 #: applications/luci-app-ser2net/root/usr/share/luci/menu.d/luci-app-ser2net.json:23
@@ -121,7 +122,7 @@ msgstr "Proxyk"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:75
 msgid "RX LED configuration"
-msgstr "RX LED beállítások"
+msgstr "RX LED-beállítások"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:24
 msgid "Raw"
@@ -150,7 +151,7 @@ msgstr "Leállítási bitek"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:74
 msgid "TX LED configuration"
-msgstr "TX LED beállítások"
+msgstr "TX LED-beállítások"
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:26
 msgid "Telnet"
@@ -159,7 +160,7 @@ msgstr "Telnet"
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:18
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/settings.js:29
 msgid "The TCP port to listen on."
-msgstr "A TCP port, amelyen figyelni kell."
+msgstr "A TCP-port, amelyen figyelni kell."
 
 #: applications/luci-app-ser2net/htdocs/luci-static/resources/view/ser2net/proxies.js:30
 msgid ""

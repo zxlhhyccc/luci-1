@@ -1,25 +1,25 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-03-26 23:10+0000\n"
-"Last-Translator: Wellington Terumi Uemura <wellingtonuemura@gmail.com>\n"
+"PO-Revision-Date: 2026-04-20 13:23+0000\n"
+"Last-Translator: Volenski <volenski@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/"
 "openwrt/luciapplicationsvnstat2/pt_BR/>\n"
 "Language: pt_BR\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.12-dev\n"
+"X-Generator: Weblate 5.17.1-dev\n"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:113
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:128
 msgid "5 Minute"
 msgstr "5 Minutos"
 
 #: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:21
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:40
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:55
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:130
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:145
 msgid "Clear data for all interfaces"
 msgstr "Limpa os dados de todas as interfaces"
 
@@ -27,21 +27,21 @@ msgstr "Limpa os dados de todas as interfaces"
 msgid "Configuration"
 msgstr "Configuração"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:78
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:93
 msgid "Could not load graph, no data available:"
 msgstr "Não foi possível carregar o gráfico, não há dados disponíveis:"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:115
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:130
 msgid "Daily"
-msgstr "Diário"
+msgstr "Diariamente"
 
 #: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:26
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:82
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:59
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:79
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:74
 msgid "Delete"
-msgstr "Apagar"
+msgstr "Excluir"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:34
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:49
 msgid "Delete data for ALL interfaces"
 msgstr "Excluir os dados em TODAS as interfaces"
 
@@ -49,7 +49,7 @@ msgstr "Excluir os dados em TODAS as interfaces"
 msgid "Delete interface <em>%h</em>"
 msgstr "Exclua a interface <em>%h</em>"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:95
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:92
 msgid "Delete…"
 msgstr "Excluir…"
 
@@ -61,11 +61,11 @@ msgstr "Conceder acesso ao aplicativo LuCI vnstat2"
 msgid "Graphs"
 msgstr "Gráficos"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:114
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:129
 msgid "Hourly"
 msgstr "Por hora"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:81
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:78
 msgid "Interface"
 msgstr "Interface"
 
@@ -73,7 +73,7 @@ msgstr "Interface"
 msgid "Interfaces"
 msgstr "Interfaces"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:71
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:86
 msgid "Loading graphs…"
 msgstr "Carregando gráficos…"
 
@@ -81,11 +81,11 @@ msgstr "Carregando gráficos…"
 msgid "Monitor interfaces"
 msgstr "Monitorar interfaces"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:116
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:131
 msgid "Monthly"
-msgstr "Mensal"
+msgstr "Mensalmente"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:118
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:133
 msgid ""
 "No monitored interfaces have been found. Go to the configuration to enable "
 "monitoring for one or more interfaces."
@@ -93,15 +93,15 @@ msgstr ""
 "Não foram encontradas interfaces monitoradas. Vá para a configuração para "
 "ativar o monitoramento de uma ou mais interfaces."
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:99
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:96
 msgid "No unconfigured interfaces found in database."
 msgstr "Não há interfaces não configuradas encontradas no banco de dados."
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:111
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:126
 msgid "Summary"
 msgstr "Resumo"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:35
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:50
 msgid ""
 "The data will be removed from the database permanently. This cannot be "
 "undone."
@@ -125,7 +125,7 @@ msgstr ""
 "As interfaces selecionadas são automaticamente adicionadas ao banco de dados "
 "vnStat durante a inicialização."
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:104
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:101
 msgid ""
 "These interfaces are present in the vnStat database, but are not configured "
 "above."
@@ -133,7 +133,7 @@ msgstr ""
 "Essas interfaces estão presentes no banco de dados vnStat, mas não estão "
 "configuradas acima."
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:112
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:127
 msgid "Top"
 msgstr "Topo"
 
@@ -141,16 +141,16 @@ msgstr "Topo"
 msgid "Traffic Monitor"
 msgstr "Monitor de tráfego"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:102
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/config.js:99
 msgid "Unconfigured interfaces"
 msgstr "Interfaces não configuradas"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:108
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:123
 msgid "Warning: The service is not running, graphs will not be updated!"
 msgstr ""
 "Aviso: O serviço não está em execução, os gráficos não serão atualizados!"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:117
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:132
 msgid "Yearly"
 msgstr "Anual"
 
@@ -158,7 +158,7 @@ msgstr "Anual"
 msgid "vnStat"
 msgstr "vnStat"
 
-#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:106
+#: applications/luci-app-vnstat2/htdocs/luci-static/resources/view/vnstat2/graphs.js:121
 msgid "vnStat Graphs"
 msgstr "Gráficos vnStat"
 
@@ -169,6 +169,3 @@ msgid ""
 msgstr ""
 "O VnStat é um monitor de tráfego de rede para o Linux que mantém um registro "
 "de tráfego de rede para as interfaces selecionadas."
-
-#~ msgid "vnStat Traffic Monitor"
-#~ msgstr "Monitor de Tráfego vnStat"

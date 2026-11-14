@@ -5,11 +5,41 @@
 'require fs';
 'require ui';
 'require uci';
+'require rpc';
 'require form';
 'require network';
 'require firewall';
 'require tools.widgets as widgets';
 'require tools.network as nettools';
+
+const callNetworkDeviceStatus = rpc.declare({
+	object: 'network.device',
+	method: 'status',
+	params: [ 'name' ],
+	expect: { '': {} }
+});
+
+const speedBaseParse = /^(\d+)base(\w+)-(H|F)$/;
+const phyLinkSpeeds = [
+	"10baseT-F", "10baseT-H",
+	"100baseT-F", "100baseT-H",
+	"1000baseT-F",
+	"2500baseT-F",
+	"5000baseT-F",
+	"10000baseT-F",
+	"14000baseT-F",
+	"20000baseT-F",
+	"25000baseT-F",
+	"40000baseT-F",
+	"50000baseT-F",
+	"56000baseT-F",
+	"80000baseT-F",
+	"100000baseT-F",
+	"200000baseT-F",
+	"400000baseT-F",
+	"800000baseT-F",
+	"1600000baseT-F"
+];
 
 var isReadonlyView = !L.hasViewPermission() || null;
 
@@ -20,26 +50,37 @@ function count_changes(section_id) {
 		return n;
 
 	if (Array.isArray(changes.network))
-		for (var i = 0; i < changes.network.length; i++)
-			n += (changes.network[i][1] == section_id);
+		for (let c of changes.network)
+			n += (c[1] == section_id);
 
 	if (Array.isArray(changes.dhcp))
-		for (var i = 0; i < changes.dhcp.length; i++)
-			n += (changes.dhcp[i][1] == section_id);
+		for (let c of changes.dhcp)
+			n += (c[1] == section_id);
 
 	return n;
 }
 
+/* isUp() only reflects IFF_UP, which netifd sets on ifup regardless of the
+ * link state, so a carrier is required as well. Alias devices (@network)
+ * have no kernel state of their own; netifd binds them to the L3 device of
+ * the referenced network while that network is up, so check that device. */
+function has_link(dev) {
+	if (dev && dev.getType() == 'alias')
+		dev = network.instantiateNetwork(dev.getName().substring(1)).getL3Device();
+
+	return dev ? (dev.isUp() && dev.getCarrier()) : false;
+}
+
 function render_iface(dev, alias) {
 	var type = dev ? dev.getType() : 'ethernet',
-	    up   = dev ? dev.isUp() : false;
+	    up   = has_link(dev);
 
 	return E('span', { class: 'cbi-tooltip-container' }, [
-		E('img', { 'class' : 'middle', 'src': L.resource('icons/%s%s.png').format(
+		E('img', { 'class' : 'middle', 'src': L.resource('icons/%s%s.svg').format(
 			alias ? 'alias' : type,
 			up ? '' : '_disabled') }),
 		E('span', { 'class': 'cbi-tooltip ifacebadge large' }, [
-			E('img', { 'src': L.resource('icons/%s%s.png').format(
+			E('img', { 'src': L.resource('icons/%s%s.svg').format(
 				type, up ? '' : '_disabled') }),
 			L.itemlist(E('span', { 'class': 'left' }), [
 				_('Type'),      dev ? dev.getTypeI18n() : null,
@@ -53,8 +94,26 @@ function render_iface(dev, alias) {
 	]);
 }
 
+/* Device representing an interface: its L3 device while the interface is
+ * up, else its configured device. The L3 device comes first, as it can
+ * determine the device type of tunnel configs. PPPoE creates its own L3
+ * device on top of the configured one but, unlike the other PPP protocols,
+ * is not virtual, so getDevice() returns the configured device. Represent
+ * it by its PPP device instead, even while the session is down. */
+function iface_device(ifc) {
+	const l3dev = ifc.getL3Device();
+
+	if (l3dev)
+		return l3dev;
+
+	if (ifc.getProtocol() == 'pppoe')
+		return network.instantiateDevice(ifc.getIfname(), ifc);
+
+	return ifc.getDevice();
+}
+
 function render_status(node, ifc, with_device) {
-	var desc = null, c = [];
+	let desc = null;
 
 	if (ifc.isDynamic())
 		desc = _('Virtual dynamic interface');
@@ -65,46 +124,34 @@ function render_status(node, ifc, with_device) {
 			null, E('em', _('Interface is marked for deletion'))
 		]);
 
-	var i18n = ifc.getI18n();
-	if (i18n)
-		desc = desc ? '%s (%s)'.format(desc, i18n) : i18n;
+	desc = desc ? '%s (%s)'.format(desc, ifc.getI18n()) : ifc.getI18n();
 
-	var changecount = with_device ? 0 : count_changes(ifc.getName()),
-	    ipaddrs = changecount ? [] : ifc.getIPAddrs(),
-	    ip6addrs = changecount ? [] : ifc.getIP6Addrs(),
-	    errors = ifc.getErrors(),
-	    maindev = ifc.getL3Device() || ifc.getDevice(),
-	    macaddr = maindev ? maindev.getMAC() : null;
+	const changecount = with_device ? 0 : count_changes(ifc.getName());
+	const maindev = iface_device(ifc);
+	const macaddr = maindev ? maindev.getMAC() : null;
+	const carrier = maindev ? maindev.getCarrier(): null;
+	const cond00 = !changecount && !ifc.isDynamic() && !ifc.isAlias();
+	const cond01 = cond00 && macaddr;
+	const cond02 = cond00 && maindev;
+
+	function addEntries(label, array) {
+		return Array.isArray(array) ? array.flatMap((item) => [label, item]) : [label, null];
+	}
 
 	return L.itemlist(node, [
 		_('Protocol'), with_device ? null : (desc || '?'),
-		_('Device'),   with_device ? (maindev ? maindev.getShortName() : E('em', _('Not present'))) : null,
-		_('Uptime'),   (!changecount && ifc.isUp()) ? '%t'.format(ifc.getUptime()) : null,
-		_('MAC'),      (!changecount && !ifc.isDynamic() && !ifc.isAlias() && macaddr) ? macaddr : null,
-		_('RX'),       (!changecount && !ifc.isDynamic() && !ifc.isAlias() && maindev) ? '%.2mB (%d %s)'.format(maindev.getRXBytes(), maindev.getRXPackets(), _('Pkts.')) : null,
-		_('TX'),       (!changecount && !ifc.isDynamic() && !ifc.isAlias() && maindev) ? '%.2mB (%d %s)'.format(maindev.getTXBytes(), maindev.getTXPackets(), _('Pkts.')) : null,
-		_('IPv4'),     ipaddrs[0],
-		_('IPv4'),     ipaddrs[1],
-		_('IPv4'),     ipaddrs[2],
-		_('IPv4'),     ipaddrs[3],
-		_('IPv4'),     ipaddrs[4],
-		_('IPv6'),     ip6addrs[0],
-		_('IPv6'),     ip6addrs[1],
-		_('IPv6'),     ip6addrs[2],
-		_('IPv6'),     ip6addrs[3],
-		_('IPv6'),     ip6addrs[4],
-		_('IPv6'),     ip6addrs[5],
-		_('IPv6'),     ip6addrs[6],
-		_('IPv6'),     ip6addrs[7],
-		_('IPv6'),     ip6addrs[8],
-		_('IPv6'),     ip6addrs[9],
-		_('IPv6-PD'),  changecount ? null : ifc.getIP6Prefix(),
+		_('Device'), with_device ? (maindev ? maindev.getShortName() : E('em', _('Not present'))) : null,
+		_('Carrier'), (cond02) ? (carrier ? _('Present') : _('Absent')) : null,
+		_('Uptime'), (!changecount && ifc.isUp()) ? '%t'.format(ifc.getUptime()) : null,
+		_('MAC'), (cond01) ? macaddr : null,
+		_('RX'), (cond02) ? '%.2mB (%d %s)'.format(maindev.getRXBytes(), maindev.getRXPackets(), _('Pkts.')) : null,
+		_('TX'), (cond02) ? '%.2mB (%d %s)'.format(maindev.getTXBytes(), maindev.getTXPackets(), _('Pkts.')) : null,
+		...addEntries(_('IPv4'), changecount ? [] : ifc.getIPAddrs()),
+		...addEntries(_('IPv6'), changecount ? [] : ifc.getIP6Addrs()),
+		...addEntries(_('IPv6-PD'), changecount ? null : ifc.getIP6Prefixes?.()),
+		_('Information'), with_device ? null : (ifc.get('disabled') != '1' ? null : _('Interface disabled')),
 		_('Information'), with_device ? null : (ifc.get('auto') != '0' ? null : _('Not started on boot')),
-		_('Error'),    errors ? errors[0] : null,
-		_('Error'),    errors ? errors[1] : null,
-		_('Error'),    errors ? errors[2] : null,
-		_('Error'),    errors ? errors[3] : null,
-		_('Error'),    errors ? errors[4] : null,
+		...addEntries(_('Error'), ifc.getErrors()),
 		null, changecount ? E('a', {
 			href: '#',
 			click: L.bind(ui.changes.displayChanges, ui.changes)
@@ -113,11 +160,11 @@ function render_status(node, ifc, with_device) {
 }
 
 function render_modal_status(node, ifc) {
-	var dev = ifc ? (ifc.getDevice() || ifc.getL3Device() || ifc.getL3Device()) : null;
+	const dev = ifc ? iface_device(ifc) : null;
 
 	dom.content(node, [
 		E('img', {
-			'src': L.resource('icons/%s%s.png').format(dev ? dev.getType() : 'ethernet', (dev && dev.isUp()) ? '' : '_disabled'),
+			'src': L.resource('icons/%s%s.svg').format(dev ? dev.getType() : 'ethernet', ifc && ifc.isUp() ? '' : '_disabled'),
 			'title': dev ? dev.getTypeI18n() : _('Not present')
 		}),
 		ifc ? render_status(E('span'), ifc, true) : E('em', _('Interface not present or not connected yet.'))
@@ -127,9 +174,10 @@ function render_modal_status(node, ifc) {
 }
 
 function render_ifacebox_status(node, ifc) {
-	var dev = ifc.getL3Device() || ifc.getDevice(),
-	    subdevs = dev ? dev.getPorts() : null,
-	    c = [ render_iface(dev, ifc.isAlias()) ];
+	const dev = iface_device(ifc);
+	/* list the configured device of PPPoE like a bridge port, e.g. for the DSL sync */
+	const subdevs = (ifc.getProtocol() == 'pppoe') ? L.toArray(ifc.getDevice()) : (dev ? dev.getPorts() : null);
+	const c = [ render_iface(dev, ifc.isAlias()) ];
 
 	if (subdevs && subdevs.length) {
 		var sifs = [ ' (' ];
@@ -144,7 +192,7 @@ function render_ifacebox_status(node, ifc) {
 
 	c.push(E('br'));
 	c.push(E('small', {}, ifc.isAlias() ? _('Alias of "%s"').format(ifc.isAlias())
-	                                    : (dev ? dev.getName() : E('em', _('Not present')))));
+	    : (dev ? dev.getName() : E('em', _('Not present')))));
 
 	dom.content(node, c);
 
@@ -155,9 +203,9 @@ function render_ifacebox_status(node, ifc) {
 }
 
 function iface_updown(up, id, ev, force) {
-	var row = document.querySelector('.cbi-section-table-row[data-sid="%s"]'.format(id)),
-	    dsc = row.querySelector('[data-name="_ifacestat"] > div'),
-	    btns = row.querySelectorAll('.cbi-section-actions .reconnect, .cbi-section-actions .down');
+	const row = document.querySelector('.cbi-section-table-row[data-sid="%s"]'.format(id));
+	const dsc = row.querySelector('[data-name="_ifacestat"] > div');
+	const btns = row.querySelectorAll('.cbi-section-actions .reconnect, .cbi-section-actions .down');
 
 	btns[+!up].blur();
 	btns[+!up].classList.add('spinning');
@@ -175,10 +223,10 @@ function iface_updown(up, id, ev, force) {
 
 				ui.showModal(_('Confirm disconnect'), [
 					E('p', _('You appear to be currently connected to the device via the "%h" interface. Do you really want to shut down the interface?').format(id)),
-					E('div', { 'class': 'right' }, [
+					E('div', { 'class': 'button-row' }, [
 						E('button', {
-							'class': 'cbi-button cbi-button-neutral',
-							'click': function(ev) {
+							'class': 'btn cbi-button cbi-button-neutral',
+							'click': function (ev) {
 								btns[1].classList.remove('spinning');
 								btns[1].disabled = false;
 								btns[0].disabled = false;
@@ -188,8 +236,8 @@ function iface_updown(up, id, ev, force) {
 						}, _('Cancel')),
 						' ',
 						E('button', {
-							'class': 'cbi-button cbi-button-negative important',
-							'click': function(ev) {
+							'class': 'btn cbi-button cbi-button-negative important',
+							'click': function (ev) {
 								dsc.setAttribute('disconnect', '');
 								dom.content(dsc, E('em', _('Interface is shutting down...')));
 
@@ -212,15 +260,15 @@ function iface_updown(up, id, ev, force) {
 }
 
 function get_netmask(s, use_cfgvalue) {
-	var readfn = use_cfgvalue ? 'cfgvalue' : 'formvalue',
-	    addrs = L.toArray(s[readfn](s.section, 'ipaddr')),
-	    mask = s[readfn](s.section, 'netmask'),
-	    firstsubnet = mask ? addrs[0] + '/' + mask : addrs.filter(function(a) { return a.indexOf('/') > 0 })[0];
+	const readfn = use_cfgvalue ? 'cfgvalue' : 'formvalue';
+	const addrs = L.toArray(s[readfn](s.section, 'ipaddr'));
+	const mask = s[readfn](s.section, 'netmask');
+	const firstsubnet = mask ? addrs[0] + '/' + mask : addrs.filter(function(a) { return a.indexOf('/') > 0 })[0];
 
 	if (firstsubnet == null)
 		return null;
 
-	var subnetmask = firstsubnet.split('/')[1];
+	let subnetmask = firstsubnet.split('/')[1];
 
 	if (!isNaN(subnetmask))
 		subnetmask = network.prefixToMask(+subnetmask);
@@ -231,6 +279,7 @@ function get_netmask(s, use_cfgvalue) {
 function has_peerdns(proto) {
 	switch (proto) {
 	case 'dhcp':
+	case 'dhcpv6':
 	case 'qmi':
 	case 'ppp':
 	case 'pppoe':
@@ -244,58 +293,44 @@ function has_peerdns(proto) {
 	return false;
 }
 
-var cbiRichListValue = form.ListValue.extend({
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var choices = this.transformChoices();
-		var widget = new ui.Dropdown((cfgvalue != null) ? cfgvalue : this.default, choices, {
-			id: this.cbid(section_id),
-			sort: this.keylist,
-			optional: true,
-			select_placeholder: this.select_placeholder || this.placeholder,
-			custom_placeholder: this.custom_placeholder || this.placeholder,
-			validate: L.bind(this.validate, this, section_id),
-			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
-		});
-
-		return widget.render();
-	},
-
-	value: function(value, title, description) {
-		if (description) {
-			form.ListValue.prototype.value.call(this, value, E([], [
-				E('span', { 'class': 'hide-open' }, [ title ]),
-				E('div', { 'class': 'hide-close', 'style': 'min-width:25vw' }, [
-					E('strong', [ title ]),
-					E('br'),
-					E('span', { 'style': 'white-space:normal' }, description)
-				])
-			]));
-		}
-		else {
-			form.ListValue.prototype.value.call(this, value, title);
-		}
+function has_sourcefilter(proto) {
+	switch (proto) {
+	case '3g':
+	case 'dhcpv6':
+	case 'directip':
+	case 'mbim':
+	case 'modemmanager':
+	case 'ncm':
+	case 'ppp':
+	case 'pppoa':
+	case 'pppoe':
+	case 'pptp':
+	case 'qmi':
+		return true;
 	}
-});
+
+	return false;
+}
 
 return view.extend({
-	poll_status: function(map, networks) {
-		var resolveZone = null;
+	poll_status(map, networks) {
+		let resolveZone = null;
 
-		for (var i = 0; i < networks.length; i++) {
-			var ifc = networks[i],
-			    row = map.querySelector('.cbi-section-table-row[data-sid="%s"]'.format(ifc.getName()));
+		for (let ifc of networks) {
+			const row = map.querySelector('.cbi-section-table-row[data-sid="%s"]'.format(ifc.getName()));
 
 			if (row == null)
 				continue;
 
-			var dsc = row.querySelector('[data-name="_ifacestat"] > div'),
-			    box = row.querySelector('[data-name="_ifacebox"] .ifacebox-body'),
-			    btn1 = row.querySelector('.cbi-section-actions .reconnect'),
-			    btn2 = row.querySelector('.cbi-section-actions .down'),
-			    stat = document.querySelector('[id="%s-ifc-status"]'.format(ifc.getName())),
-			    resolveZone = render_ifacebox_status(box, ifc),
-			    disabled = ifc ? !ifc.isUp() : true,
-			    dynamic = ifc ? ifc.isDynamic() : false;
+			const dsc = row.querySelector('[data-name="_ifacestat"] > div');
+			const box = row.querySelector('[data-name="_ifacebox"] .ifacebox-body');
+			const btn1 = row.querySelector('.cbi-section-actions .reconnect');
+			const btn2 = row.querySelector('.cbi-section-actions .down');
+			const stat = document.querySelector('[id="%s-ifc-status"]'.format(ifc.getName()));
+			resolveZone = render_ifacebox_status(box, ifc);
+			const disabled = ifc ? !ifc.isUp() : true;
+			const dynamic = ifc ? ifc.isDynamic() : false;
+			const pending = ifc ? ifc.isPending() : false;
 
 			if (dsc.hasAttribute('reconnect')) {
 				dom.content(dsc, E('em', _('Interface is starting...')));
@@ -307,10 +342,10 @@ return view.extend({
 				render_status(dsc, ifc, false);
 			}
 			else if (!ifc.getProtocol()) {
-				var e = map.querySelector('[id="cbi-network-%s"] .cbi-button-edit'.format(ifc.getName()));
+				const e = map.querySelector('[id="cbi-network-%s"] .cbi-button-edit'.format(ifc.getName()));
 				if (e) e.disabled = true;
 
-				var link = L.url('admin/system/opkg') + '?query=luci-proto';
+				const link = L.url('admin/system/package-manager') + '?query=luci-proto';
 				dom.content(dsc, [
 					E('em', _('Unsupported protocol type.')), E('br'),
 					E('a', { href: link }, _('Install protocol extensions...'))
@@ -321,18 +356,40 @@ return view.extend({
 			}
 
 			if (stat) {
-				var dev = ifc.getDevice();
+				const dev = iface_device(ifc);
 				dom.content(stat, [
 					E('img', {
-						'src': L.resource('icons/%s%s.png').format(dev ? dev.getType() : 'ethernet', (dev && dev.isUp()) ? '' : '_disabled'),
+						'src': L.resource('icons/%s%s.svg').format(dev ? dev.getType() : 'ethernet', ifc.isUp() ? '' : '_disabled'),
 						'title': dev ? dev.getTypeI18n() : _('Not present')
 					}),
 					render_status(E('span'), ifc, true)
 				]);
 			}
 
-			btn1.disabled = isReadonlyView || btn1.classList.contains('spinning') || btn2.classList.contains('spinning') || dynamic;
-			btn2.disabled = isReadonlyView || btn1.classList.contains('spinning') || btn2.classList.contains('spinning') || dynamic || disabled;
+			if (isReadonlyView === true) {
+				btn1.disabled = true;
+				btn2.disabled = true;
+			}
+			else if (btn1.classList.contains('spinning') || btn2.classList.contains('spinning')) {
+				btn1.disabled = true;
+				btn2.disabled = true;
+			}
+			else if (dynamic === true) {
+				btn1.disabled = true;
+				btn2.disabled = true;
+			}
+			else if (pending === true) {
+				btn1.disabled = true;
+				btn2.disabled = false;
+			}
+			else if (disabled === true) {
+				btn1.disabled = false;
+				btn2.disabled = true;
+			}
+			else {
+				btn1.disabled = false;
+				btn2.disabled = false;
+			}
 		}
 
 		document.querySelectorAll('.port-status-device[data-device]').forEach(function(node) {
@@ -346,39 +403,39 @@ return view.extend({
 		return Promise.all([ resolveZone, network.flushCache() ]);
 	},
 
-	load: function() {
+	load() {
 		return Promise.all([
 			network.getDSLModemType(),
 			network.getDevices(),
 			fs.lines('/etc/iproute2/rt_tables'),
-			L.resolveDefault(fs.read('/usr/lib/opkg/info/netifd.control')),
+			L.resolveDefault(callNetworkDeviceStatus(), {}),
 			uci.changes()
 		]);
 	},
 
-	interfaceBridgeWithIfnameSections: function() {
+	interfaceBridgeWithIfnameSections() {
 		return uci.sections('network', 'interface').filter(function(ns) {
 			return ns.type == 'bridge' && !ns.ports && ns.ifname;
 		});
 	},
 
-	deviceWithIfnameSections: function() {
+	deviceWithIfnameSections() {
 		return uci.sections('network', 'device').filter(function(ns) {
 			return ns.type == 'bridge' && !ns.ports && ns.ifname;
 		});
 	},
 
-	interfaceWithIfnameSections: function() {
+	interfaceWithIfnameSections() {
 		return uci.sections('network', 'interface').filter(function(ns) {
 			return !ns.device && ns.ifname;
 		});
 	},
 
-	handleBridgeMigration: function(ev) {
-		var tasks = [];
+	handleBridgeMigration(ev) {
+		const tasks = [];
 
 		this.interfaceBridgeWithIfnameSections().forEach(function(ns) {
-			var device_name = 'br-' + ns['.name'];
+			const device_name = 'br-' + ns['.name'];
 
 			tasks.push(uci.callAdd('network', 'device', null, {
 				'name': device_name,
@@ -404,7 +461,7 @@ return view.extend({
 			.then(L.bind(ui.changes.apply, ui.changes));
 	},
 
-	renderBridgeMigration: function() {
+	renderBridgeMigration() {
 		ui.showModal(_('Network bridge configuration migration'), [
 			E('p', _('The existing network configuration needs to be changed for LuCI to function properly.')),
 			E('p', _('Upon pressing "Continue", bridges configuration will be updated and the network will be restarted to apply the updated configuration.')),
@@ -416,8 +473,8 @@ return view.extend({
 		]);
 	},
 
-	handleIfnameMigration: function(ev) {
-		var tasks = [];
+	handleIfnameMigration(ev) {
+		const tasks = [];
 
 		this.deviceWithIfnameSections().forEach(function(ds) {
 			tasks.push(uci.callSet('network', ds['.name'], {
@@ -438,7 +495,7 @@ return view.extend({
 			.then(L.bind(ui.changes.apply, ui.changes));
 	},
 
-	renderIfnameMigration: function() {
+	renderIfnameMigration() {
 		ui.showModal(_('Network ifname configuration migration'), [
 			E('p', _('The existing network configuration needs to be changed for LuCI to function properly.')),
 			E('p', _('Upon pressing "Continue", ifname options will get renamed and the network will be restarted to apply the updated configuration.')),
@@ -450,22 +507,17 @@ return view.extend({
 		]);
 	},
 
-	render: function(data) {
-		var netifdVersion = (data[3] || '').match(/Version: ([^\n]+)/);
+	render([dslModemType, netDevs, rtTables, devStatus]) {
 
-		if (netifdVersion && netifdVersion[1] >= "2021-05-26") {
-			if (this.interfaceBridgeWithIfnameSections().length)
-				return this.renderBridgeMigration();
-			else if (this.deviceWithIfnameSections().length || this.interfaceWithIfnameSections().length)
-				return this.renderIfnameMigration();
-		}
+		if (this.interfaceBridgeWithIfnameSections().length)
+			return this.renderBridgeMigration();
+		else if (this.deviceWithIfnameSections().length || this.interfaceWithIfnameSections().length)
+			return this.renderIfnameMigration();
 
-		var dslModemType = data[0],
-		    netDevs = data[1],
-		    m, s, o;
+		let m, s, o;
 
-		var rtTables = data[2].map(function(l) {
-			var m = l.trim().match(/^(\d+)\s+(\S+)$/);
+		rtTables = rtTables.map(function(l) {
+			const m = l.trim().match(/^(\d+)\s+(\S+)$/);
 			return m ? [ +m[1], m[2] ] : null;
 		}).filter(function(e) {
 			return e && e[0] > 0;
@@ -478,12 +530,14 @@ return view.extend({
 		s = m.section(form.GridSection, 'interface', _('Interfaces'));
 		s.anonymous = true;
 		s.addremove = true;
+		s.filterrow = true;
 		s.addbtntitle = _('Add new interface...');
 
 		s.load = function() {
 			return Promise.all([
 				network.getNetworks(),
-				firewall.getZones()
+				firewall.getZones(),
+				uci.load('system')
 			]).then(L.bind(function(data) {
 				this.networks = data[0];
 				this.zones = data[1];
@@ -511,20 +565,19 @@ return view.extend({
 			var tdEl = this.super('renderRowActions', [ section_id, _('Edit') ]),
 			    net = this.networks.filter(function(n) { return n.getName() == section_id })[0],
 			    disabled = net ? !net.isUp() : true,
-			    dynamic = net ? net.isDynamic() : false;
+			    dynamic = net ? net.isDynamic() : false,
+			    pending = net ? net.isPending() : false;
 
 			dom.content(tdEl.lastChild, [
 				E('button', {
 					'class': 'cbi-button cbi-button-neutral reconnect',
 					'click': iface_updown.bind(this, true, section_id),
 					'title': _('Reconnect this interface'),
-					'disabled': dynamic ? 'disabled' : null
 				}, _('Restart')),
 				E('button', {
 					'class': 'cbi-button cbi-button-neutral down',
 					'click': iface_updown.bind(this, false, section_id),
 					'title': _('Shutdown this interface'),
-					'disabled': (dynamic || disabled) ? 'disabled' : null
 				}, _('Stop')),
 				tdEl.lastChild.firstChild,
 				tdEl.lastChild.lastChild
@@ -532,23 +585,44 @@ return view.extend({
 
 			if (!dynamic && net && !uci.get('network', net.getName())) {
 				tdEl.lastChild.childNodes[0].disabled = true;
+				tdEl.lastChild.childNodes[1].disabled = true;
 				tdEl.lastChild.childNodes[2].disabled = true;
 				tdEl.lastChild.childNodes[3].disabled = true;
+			}
+			else if(dynamic === true) {
+				tdEl.lastChild.childNodes[0].disabled = true;
+				tdEl.lastChild.childNodes[1].disabled = true;
+				tdEl.lastChild.childNodes[2].disabled = true;
+				tdEl.lastChild.childNodes[3].disabled = true;
+			}
+			else if(pending === true) {
+				tdEl.lastChild.childNodes[0].disabled = true;
+				tdEl.lastChild.childNodes[1].disabled = false;
+				tdEl.lastChild.childNodes[2].disabled = false;
+				tdEl.lastChild.childNodes[3].disabled = false;
+			}
+			else if (disabled === true){
+				tdEl.lastChild.childNodes[0].disabled = false;
+				tdEl.lastChild.childNodes[1].disabled = true;
+				tdEl.lastChild.childNodes[2].disabled = false;
+				tdEl.lastChild.childNodes[3].disabled = false;
+			}
+			else {
+				tdEl.lastChild.childNodes[0].disabled = false;
+				tdEl.lastChild.childNodes[1].disabled = false;
+				tdEl.lastChild.childNodes[2].disabled = false;
+				tdEl.lastChild.childNodes[3].disabled = false;
 			}
 
 			return tdEl;
 		};
 
 		s.addModalOptions = function(s) {
-			var protoval = uci.get('network', s.section, 'proto'),
-			    protoclass = protoval ? network.getProtocol(protoval) : null,
-			    o, proto_select, proto_switch, type, stp, igmp, ss, so;
-
-			if (!protoval)
-				return;
+			const protoval = uci.get('network', s.section, 'proto') || 'none';
+			let o, proto_select, proto_switch, ss, so;
 
 			return network.getNetwork(s.section).then(L.bind(function(ifc) {
-				var protocols = network.getProtocols();
+				const protocols = network.getProtocols();
 
 				protocols.sort(function(a, b) {
 					return L.naturalCompare(a.getProtocol(), b.getProtocol());
@@ -557,7 +631,7 @@ return view.extend({
 				o = s.taboption('general', form.DummyValue, '_ifacestat_modal', _('Status'));
 				o.modalonly = true;
 				o.cfgvalue = L.bind(function(section_id) {
-					var net = this.networks.filter(function(n) { return n.getName() == section_id })[0];
+					const net = this.networks.filter(function(n) { return n.getName() == section_id })[0];
 
 					return render_modal_status(E('div', {
 						'id': '%s-ifc-status'.format(section_id),
@@ -569,6 +643,7 @@ return view.extend({
 
 				proto_select = s.taboption('general', form.ListValue, 'proto', _('Protocol'));
 				proto_select.modalonly = true;
+				proto_select.default = 'none';
 
 				proto_switch = s.taboption('general', form.Button, '_switch_proto');
 				proto_switch.modalonly  = true;
@@ -587,6 +662,10 @@ return view.extend({
 				o.nobridges = false;
 				o.optional = false;
 				o.network = ifc.getName();
+				o.exclude = '@' + ifc.getName();
+
+				o = s.taboption('general', form.Flag, 'disabled', _('Disable this interface'));
+				o.modalonly = true;
 
 				o = s.taboption('general', form.Flag, 'auto', _('Bring up on boot'));
 				o.modalonly = true;
@@ -607,10 +686,7 @@ return view.extend({
 						return Promise.all([
 							firewall.getZoneByNetwork(ifc.getName()),
 							(value != null) ? firewall.getZone(value) : null
-						]).then(function(data) {
-							var old_zone = data[0],
-							    new_zone = data[1];
-
+						]).then(function([old_zone, new_zone]) {
 							if (old_zone == null && new_zone == null && (value == null || value == ''))
 								return;
 
@@ -630,11 +706,11 @@ return view.extend({
 					};
 				}
 
-				for (var i = 0; i < protocols.length; i++) {
-					proto_select.value(protocols[i].getProtocol(), protocols[i].getI18n());
+				for (let p of protocols) {
+					proto_select.value(p.getProtocol(), p.getI18n());
 
-					if (protocols[i].getProtocol() != uci.get('network', s.section, 'proto'))
-						proto_switch.depends('proto', protocols[i].getProtocol());
+					if (p.getProtocol() != protoval)
+						proto_switch.depends('proto', p.getProtocol());
 				}
 
 				if (L.hasSystemFeature('dnsmasq') || L.hasSystemFeature('odhcpd')) {
@@ -646,8 +722,9 @@ return view.extend({
 					ss.anonymous = true;
 
 					ss.tab('general',  _('General Setup'));
-					ss.tab('advanced', _('Advanced Settings'));
+					ss.tab('ipv4', _('IPv4 Settings'));
 					ss.tab('ipv6', _('IPv6 Settings'));
+					ss.tab('dhcpv6', _('DHCPv6 Settings'));
 					ss.tab('ipv6-ra', _('IPv6 RA Settings'));
 
 					ss.filter = function(section_id) {
@@ -669,8 +746,8 @@ return view.extend({
 											uci.set('dhcp', section_id, 'start', 100);
 											uci.set('dhcp', section_id, 'limit', 150);
 											uci.set('dhcp', section_id, 'leasetime', '12h');
-										}
-										else {
+											uci.set('dhcp', section_id, 'dhcpv4', 'server');
+										} else {
 											uci.set('dhcp', section_id, 'ignore', 1);
 										}
 									});
@@ -679,52 +756,92 @@ return view.extend({
 						]);
 					};
 
-					ss.taboption('general', form.Flag, 'ignore', _('Ignore interface'), _('Disable <abbr title="Dynamic Host Configuration Protocol">DHCP</abbr> for this interface.'));
+					if (L.hasSystemFeature('dnsmasq')) {
+						ss.taboption('general', form.Flag, 'ignore', _('Ignore interface'),
+							     _('Disable <abbr title="Dynamic Host Configuration Protocol">DHCP</abbr> for this interface (dnsmasq only).'));
+					}
 
 					if (protoval == 'static') {
-						so = ss.taboption('general', form.Value, 'start', _('Start'), _('Lowest leased address as offset from the network address.'));
-						so.optional = true;
-						so.datatype = 'or(uinteger,ip4addr("nomask"))';
-						so.default = '100';
-
-						so = ss.taboption('general', form.Value, 'limit', _('Limit'), _('Maximum number of leased addresses.'));
-						so.optional = true;
-						so.datatype = 'uinteger';
-						so.default = '150';
+						so = ss.taboption('general', form.Flag, 'dynamicdhcp', _('Dynamic <abbr title="Dynamic Host Configuration Protocol">DHCP</abbr>'), _('Dynamically allocate DHCP addresses for clients. If disabled, only clients having static leases will be served.'));
+						so.default = so.enabled;
 
 						so = ss.taboption('general', form.Value, 'leasetime', _('Lease time'), _('Expiry time of leased addresses, minimum is 2 minutes (<code>2m</code>).'));
 						so.optional = true;
 						so.default = '12h';
+						so.validate = function (section_id, value) {
+							if (value === "infinite" || value === "deprecated") {
+								return true;
+							}
 
-						so = ss.taboption('advanced', form.Flag, 'dynamicdhcp', _('Dynamic <abbr title="Dynamic Host Configuration Protocol">DHCP</abbr>'), _('Dynamically allocate DHCP addresses for clients. If disabled, only clients having static leases will be served.'));
-						so.default = so.enabled;
+							const regex = new RegExp("^[0-9]+[smhdw]?$", "i");
+							if (regex.test(value)) {
+								return true;
+							}
+							return _("Invalid DHCP lease time format. Use integer values optionally followed by s, m, h, d, or w.");
+						}
 
-						ss.taboption('advanced', form.Flag, 'force', _('Force'), _('Force DHCP on this network even if another server is detected.'));
+						if (L.hasSystemFeature('dnsmasq')) {
+							ss.taboption('general', form.Flag, 'force', _('Force'),
+								_('Force DHCP on this network even if another server is detected (dnsmasq only).'));
+						}
 
-						// XXX: is this actually useful?
-						//ss.taboption('advanced', form.Value, 'name', _('Name'), _('Define a name for this network.'));
+						if (L.hasSystemFeature('dnsmasq')) {
+							ss.taboption('general', form.DynamicList, 'dhcp_option', _('DHCP-Options'),
+								_('Define additional DHCP options,  for example "<code>6,192.168.2.1,192.168.2.2</code>" which advertises different DNS servers to clients (dnsmasq only).'));
 
-						so = ss.taboption('advanced', form.Value, 'netmask', _('<abbr title="Internet Protocol Version 4">IPv4</abbr>-Netmask'), _('Override the netmask sent to clients. Normally it is calculated from the subnet that is served.'));
+							ss.taboption('general', form.DynamicList, 'dhcp_option_force', _('Force DHCP-Options'),
+								_('As DHCP-Options; send unsolicited (dnsmasq only).'));
+						}
+
+						if (L.hasSystemFeature('odhcpd', 'dhcpv4') || L.hasSystemFeature('dnsmasq')) {
+							so = ss.taboption('ipv4', form.RichListValue, 'dhcpv4', _('DHCPv4 Service'),
+									  _('Enable or disable DHCPv4 services on this interface.'));
+							so.optional = true;
+							so.value('', _('disabled'),
+								 _('Do not provide DHCPv4 services on this interface.'));
+							so.value('server', _('enabled'),
+								 _('Provide DHCPv4 services on this interface.'));
+						}
+
+						if (L.hasSystemFeature('odhcpd', 'dhcpv4')) {
+							so = ss.taboption('ipv4', form.Value, 'ipv6_only_preferred', _('IPv6-Only Preferred'),
+								_('Specifies how often (in seconds) clients should check whether IPv6-only mode is still preferred (see %s, odhcpd only).')
+								.format('<a href="%s" target="_blank">RFC8925</a>').format('https://www.rfc-editor.org/rfc/rfc8925'));
+							so.optional = true;
+							so.datatype = 'or(0, range(300,86400))';
+							so.default = '0';
+						}
+
+						so = ss.taboption('ipv4', form.Value, 'start', _('Start', 'DHCP IP range start address'), _('Lowest leased address as offset from the network address.'));
 						so.optional = true;
-						so.datatype = 'ip4addr';
+						so.datatype = 'or(uinteger,ip4addr("nomask"))';
+						so.default = '100';
 
-						so.render = function(option_index, section_id, in_table) {
-							this.placeholder = get_netmask(s, true);
-							return form.Value.prototype.render.apply(this, [ option_index, section_id, in_table ]);
-						};
+						so = ss.taboption('ipv4', form.Value, 'limit', _('Limit'), _('Maximum number of leased addresses.'));
+						so.optional = true;
+						so.datatype = 'uinteger';
+						so.default = '150';
 
-						so.validate = function(section_id, value) {
-							var uielem = this.getUIElement(section_id);
-							if (uielem)
-								uielem.setPlaceholder(get_netmask(s, false));
-							return form.Value.prototype.validate.apply(this, [ section_id, value ]);
-						};
-
-						ss.taboption('advanced', form.DynamicList, 'dhcp_option', _('DHCP-Options'), _('Define additional DHCP options,  for example "<code>6,192.168.2.1,192.168.2.2</code>" which advertises different DNS servers to clients.'));
+						if (L.hasSystemFeature('dnsmasq')) {
+							so = ss.taboption('ipv4', form.Value, 'netmask', _('<abbr title="Internet Protocol Version 4">IPv4</abbr>-Netmask'),
+								_('Override the netmask sent to clients. Normally it is calculated from the subnet that is served (dnsmasq only).'));
+							so.optional = true;
+							so.datatype = 'ip4addr';
+							so.render = function(option_index, section_id, in_table) {
+								this.placeholder = get_netmask(s, true);
+								return form.Value.prototype.render.apply(this, [ option_index, section_id, in_table ]);
+							};
+							so.validate = function(section_id, value) {
+								const uielem = this.getUIElement(section_id);
+								if (uielem)
+									uielem.setPlaceholder(get_netmask(s, false));
+								return form.Value.prototype.validate.apply(this, [ section_id, value ]);
+							};
+						}
 					}
 
 
-					var has_other_master = uci.sections('dhcp', 'dhcp').filter(function(s) {
+					const has_other_master = uci.sections('dhcp', 'dhcp').filter(function(s) {
 						return (s.interface != ifc.getName() && s.master == '1');
 					})[0];
 
@@ -736,15 +853,38 @@ return view.extend({
 					;
 
 					so.validate = function(section_id, value) {
-						var hybrid_downstream_desc = _('Operate in <em>relay mode</em> if a designated master interface is configured and active, otherwise fall back to <em>server mode</em>.'),
-						    ndp_downstream_desc = _('Operate in <em>relay mode</em> if a designated master interface is configured and active, otherwise disable <abbr title="Neighbour Discovery Protocol">NDP</abbr> proxying.'),
-						    hybrid_master_desc = _('Operate in <em>relay mode</em> if an upstream IPv6 prefix is present, otherwise disable service.'),
-						    checked = this.formvalue(section_id),
-						    dhcpv6 = this.section.getOption('dhcpv6').getUIElement(section_id),
-						    ndp = this.section.getOption('ndp').getUIElement(section_id),
-						    ra = this.section.getOption('ra').getUIElement(section_id);
+						const hybrid_downstream_desc = _('Operate in <em>relay mode</em> if a designated master interface is configured and active, otherwise fall back to <em>server mode</em>.');
+						const ndp_downstream_desc = _('Operate in <em>relay mode</em> if a designated master interface is configured and active, otherwise disable <abbr title="Neighbour Discovery Protocol">NDP</abbr> proxying.');
+						const hybrid_master_desc = _('Operate in <em>relay mode</em> if an upstream IPv6 prefix is present, otherwise disable service.');
+						let ra_server_allowed = true;
+						const checked = this.formvalue(section_id);
+						const dhcpv6 = this.section.getOption('dhcpv6').getUIElement(section_id);
+						const ndp = this.section.getOption('ndp').getUIElement(section_id);
+						const ra = this.section.getOption('ra').getUIElement(section_id);
 
-						if (checked == '1' || protoval != 'static') {
+						/* Assume that serving RAs by default is fine, but disallow it for certain
+						   interface protocols such as DHCP, DHCPv6 or the various PPP flavors.
+						   The intent is only to allow RA serving for interface protocols doing
+						   some kind of static IP config over something resembling a layer 2
+						   Ethernet device. */
+						switch (protoval) {
+						case 'dhcp':
+						case 'dhcpv6':
+						case '3g':
+						case 'l2tp':
+						case 'ppp':
+						case 'pppoa':
+						case 'pppoe':
+						case 'pptp':
+						case 'pppossh':
+						case 'ipip':
+						case 'gre':
+						case 'grev6':
+							ra_server_allowed = false;
+							break;
+						}
+
+						if (checked == '1' || !ra_server_allowed) {
 							dhcpv6.node.querySelector('li[data-value="server"]').setAttribute('unselectable', '');
 
 							if (dhcpv6.getValue() == 'server')
@@ -762,7 +902,7 @@ return view.extend({
 							ndp.node.querySelector('li[data-value="hybrid"] > div > span').innerHTML = hybrid_master_desc;
 						}
 						else {
-							if (protoval == 'static') {
+							if (ra_server_allowed) {
 								dhcpv6.node.querySelector('li[data-value="server"]').removeAttribute('unselectable');
 								ra.node.querySelector('li[data-value="server"]').removeAttribute('unselectable');
 							}
@@ -776,8 +916,9 @@ return view.extend({
 					};
 
 
-					so = ss.taboption('ipv6', cbiRichListValue, 'ra', _('<abbr title="Router Advertisement">RA</abbr>-Service'),
+					so = ss.taboption('ipv6', form.RichListValue, 'ra', _('<abbr title="Router Advertisement">RA</abbr>-Service'),
 						_('Configures the operation mode of the <abbr title="Router Advertisement">RA</abbr> service on this interface.'));
+					so.optional = true;
 					so.value('', _('disabled'),
 						_('Do not send any <abbr title="Router Advertisement, ICMPv6 Type 134">RA</abbr> messages on this interface.'));
 					so.value('server', _('server mode'),
@@ -787,8 +928,9 @@ return view.extend({
 					so.value('hybrid', _('hybrid mode'), ' ');
 
 
-					so = ss.taboption('ipv6-ra', cbiRichListValue, 'ra_default', _('Default router'),
+					so = ss.taboption('ipv6-ra', form.RichListValue, 'ra_default', _('Default router'),
 						_('Configures the default router advertisement in <abbr title="Router Advertisement">RA</abbr> messages.'));
+					so.optional = true;
 					so.value('', _('automatic'),
 						_('Announce this device as default router if a local IPv6 default route is present.'));
 					so.value('1', _('on available prefix'),
@@ -804,8 +946,17 @@ return view.extend({
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 
-					so = ss.taboption('ipv6-ra', cbiRichListValue, 'ra_flags', _('<abbr title="Router Advertisement">RA</abbr> Flags'),
+					so = ss.taboption('ipv6-ra', form.ListValue, 'ra_preference', _('Router Priority'),
+						_('A tie-breaker for clients and their routes when multiple routers exist on the same network.'));
+					so.default = 'medium';
+					so.value('low', _('Low'));
+					so.value('medium', _('Medium'));
+					so.value('high', _('High'));
+					so.depends('ra', 'server');
+
+					so = ss.taboption('ipv6-ra', form.RichListValue, 'ra_flags', _('<abbr title="Router Advertisement">RA</abbr> Flags'),
 						_('Specifies the flags sent in <abbr title="Router Advertisement">RA</abbr> messages, for example to instruct clients to request further information via stateful DHCPv6.'));
+					so.optional = true;
 					so.value('managed-config', _('managed config (M)'),
 						_('The <em>Managed address configuration</em> (M) flag indicates that IPv6 addresses are available via DHCPv6.'));
 					so.value('other-config', _('other config (O)'),
@@ -817,11 +968,11 @@ return view.extend({
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 					so.cfgvalue = function(section_id) {
-						var flags = L.toArray(uci.get('dhcp', section_id, 'ra_flags'));
+						const flags = L.toArray(uci.get('dhcp', section_id, 'ra_flags'));
 						return flags.length ? flags : [ 'other-config' ];
 					};
 					so.remove = function(section_id) {
-						var existing = L.toArray(uci.get('dhcp', section_id, 'ra_flags'));
+						const existing = L.toArray(uci.get('dhcp', section_id, 'ra_flags'));
 						if (this.isActive(section_id)) {
 							if (existing.length != 1 || existing[0] != 'none')
 								uci.set('dhcp', section_id, 'ra_flags', [ 'none' ]);
@@ -830,6 +981,58 @@ return view.extend({
 							uci.unset('dhcp', section_id, 'ra_flags');
 						}
 					};
+
+					so = ss.taboption('ipv6-ra', form.RichListValue, '_ra_pio_flags', _('RA <abbr title="Prefix Information Option">PIO</abbr> Flags'),
+						_('Allow <abbr title="Prefix Information Option">PIO</abbr> flags sent in RA messages, globally for all prefixes.'));
+					so.optional = true;
+					so.value('pd', _('prefix delegation (PD) preferred (P)'),
+						_('The PD <em>preferred</em> (P) flag indicates that the network prefers clients use PD instead of individual addresses via DHCPv6 or SLAAC. Requires DHCPv6 and DHCPv6-PD.'));
+					/* Here PD-P depends on RA being in server or hybrid mode to
+					distribute the PIO P flag.
+
+					For odhcpd to send the PIO P flag set to on requires:
+					- dhcpv6 on [server, hybrid]
+					- dhcpv6_pd on
+					- dhcpv6_pd_preferred on
+
+					For odhcpd to relay an upstream PIO P flag which is on requires:
+					- dhcpv6 on [relay]
+					- dhcpv6_pd on
+					- dhcpv6_pd_preferred on
+
+					otherwise a relayed P flag is disabled.
+
+					If a user runs a separate DHCPv6 server (i.e. not odhcpd), the
+					named settings must still be on to enable the RA PIO P flag here,
+					since that is what odhcpd expects.
+					*/
+					so.multiple = true;
+					so.default = '';
+					so.select_placeholder = _('none');
+					so.depends({ ra: 'server' });
+					so.depends({ ra: 'hybrid', master: '0' });
+					so.cfgvalue = function(section_id) {
+						const p_flag = uci.get('dhcp', section_id, 'dhcpv6_pd_preferred');
+						const flags = [];
+						if (p_flag) flags.push('pd');
+						return flags;
+					};
+					so.remove = function(section_id) {
+						uci.unset('dhcp', section_id, 'dhcpv6_pd_preferred');
+					};
+					so.write = function(section_id, value) {
+						if (value?.includes('pd'))
+							uci.set('dhcp', section_id, 'dhcpv6_pd_preferred', '1');
+						return;
+					}
+
+					so = ss.taboption('ipv6-ra', form.Value, 'ra_pref64', _('NAT64 prefix'), _('Announce NAT64 prefix in <abbr title="Router Advertisement">RA</abbr> messages.') +  ' ' +
+						_('See %s and %s.').format('<a href="%s" target="_blank">RFC6146</a>', '<a href="%s" target="_blank">RFC8781</a>').format('https://www.rfc-editor.org/rfc/rfc6146', 'https://www.rfc-editor.org/rfc/rfc8781'));
+					so.optional = true;
+					so.datatype = 'cidr6';
+					so.placeholder = '64:ff9b::/96';
+					so.depends('ra', 'server');
+					so.depends({ ra: 'hybrid', master: '0' });
 
 					so = ss.taboption('ipv6-ra', form.Value, 'ra_maxinterval', _('Max <abbr title="Router Advertisement">RA</abbr> interval'), _('Maximum time allowed  between sending unsolicited <abbr title="Router Advertisement, ICMPv6 Type 134">RA</abbr>. Default is 600 seconds.'));
 					so.optional = true;
@@ -845,10 +1048,28 @@ return view.extend({
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 
+					so = ss.taboption('ipv6-ra', form.Value, 'ra_reachabletime', _('<abbr title="Router Advertisement">RA</abbr> Reachability Timer'),
+						_('Units: milliseconds. 0 means unspecified.') + ' ' +
+						_('Dictates how long a node assumes a neighbor is reachable after a reachability confirmation; published in <abbr title="Router Advertisement">RA</abbr> messages.'));
+					so.optional = true;
+					so.datatype = 'range(0, 3600000)'; // RFC4861 and odhcpd caps to 3,600,000 msec
+					so.placeholder = '0';
+					so.depends('ra', 'server');
+					so.depends({ ra: 'hybrid', master: '0' });
+
+					so = ss.taboption('ipv6-ra', form.Value, 'ra_retranstime', _('<abbr title="Router Advertisement">RA</abbr> Retransmission Timer'),
+						_('Units: milliseconds. 0 means unspecified.') + ' ' +
+						_('Controls retransmitted Neighbor Solicitation messages; published in <abbr title="Router Advertisement">RA</abbr> messages.'));
+					so.optional = true;
+					so.placeholder = '0';
+					so.datatype = 'range(0, 60000)'; // odhcpd caps to 60,000 msec
+					so.depends('ra', 'server');
+					so.depends({ ra: 'hybrid', master: '0' });
+
 					so = ss.taboption('ipv6-ra', form.Value, 'ra_lifetime', _('<abbr title="Router Advertisement">RA</abbr> Lifetime'), _('Router Lifetime published  in <abbr title="Router Advertisement, ICMPv6 Type 134">RA</abbr> messages.  Maximum is 9000 seconds.'));
 					so.optional = true;
 					so.datatype = 'range(0, 9000)';
-					so.placeholder = '1800';
+					so.placeholder = '2700';
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 
@@ -858,8 +1079,8 @@ return view.extend({
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 					so.load = function(section_id) {
-						var dev = ifc.getL3Device(),
-						    path = dev ? "/proc/sys/net/ipv6/conf/%s/mtu".format(dev.getName()) : null;
+						const dev = ifc.getL3Device();
+						const path = dev ? "/proc/sys/net/ipv6/conf/%s/mtu".format(dev.getName()) : null;
 
 						return Promise.all([
 							dev ? L.resolveDefault(fs.read(path), dev.getMTU()) : null,
@@ -877,8 +1098,8 @@ return view.extend({
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 					so.load = function(section_id) {
-						var dev = ifc.getL3Device(),
-						    path = dev ? "/proc/sys/net/ipv6/conf/%s/hop_limit".format(dev.getName()) : null;
+						const dev = ifc.getL3Device();
+						const path = dev ? "/proc/sys/net/ipv6/conf/%s/hop_limit".format(dev.getName()) : null;
 
 						return Promise.all([
 							dev ? L.resolveDefault(fs.read(path), 64) : null,
@@ -890,9 +1111,31 @@ return view.extend({
 						}, this));
 					};
 
+					so = ss.taboption('ipv6-ra', form.Value, 'max_preferred_lifetime', _('IPv6 Preferred Prefix Lifetime'), _('Maximum preferred lifetime for a prefix.'));
+					so.optional = true;
+					so.placeholder = '45m';
+					so.value('5m', _('5m (5 minutes)'));
+					so.value('45m', _('45m (45 minutes - default)'));
+					so.value('3h', _('3h (3 hours)'));
+					so.value('12h', _('12h (12 hours)'));
+					so.value('7d', _('7d (7 days)'));
+					so.depends('ra', 'server');
+					so.depends({ ra: 'hybrid', master: '0' });
 
-					so = ss.taboption('ipv6', cbiRichListValue, 'dhcpv6', _('DHCPv6-Service'),
+					so = ss.taboption('ipv6-ra', form.Value, 'max_valid_lifetime', _('IPv6 Valid Prefix Lifetime'), _('Maximum valid lifetime for a prefix.'));
+					so.optional = true;
+					so.placeholder = '90m';
+					so.value('5m', _('5m (5 minutes)'));
+					so.value('90m', _('90m (90 minutes - default)'));
+					so.value('3h', _('3h (3 hours)'));
+					so.value('12h', _('12h (12 hours)'));
+					so.value('7d', _('7d (7 days)'));
+					so.depends('ra', 'server');
+					so.depends({ ra: 'hybrid', master: '0' });
+
+					so = ss.taboption('ipv6', form.RichListValue, 'dhcpv6', _('DHCPv6-Service'),
 						_('Configures the operation mode of the DHCPv6 service on this interface.'));
+					so.optional = true;
 					so.value('', _('disabled'),
 						_('Do not offer DHCPv6 service on this interface.'));
 					so.value('server', _('server mode'),
@@ -901,10 +1144,23 @@ return view.extend({
 						_('Forward DHCPv6 messages between the designated master interface and downstream interfaces.'));
 					so.value('hybrid', _('hybrid mode'), ' ');
 
+					so = ss.taboption('dhcpv6', form.Flag, 'dhcpv6_pd', _('DHCPv6-<abbr title="Prefix Delegation">PD</abbr>'),
+						_('Toggle IPv6 PD via DHCPv6.'));
+					so.depends({ dhcpv6: 'server' });
 
-					so = ss.taboption('ipv6', form.DynamicList, 'dns', _('Announced IPv6 DNS servers'),
-						_('Specifies a fixed list of IPv6 DNS server addresses to announce via DHCPv6. If left unspecified, the device will announce itself as IPv6 DNS server unless the <em>Local IPv6 DNS server</em> option is disabled.'));
-					so.datatype = 'ip6addr("nomask")'; /* restrict to IPv6 only for now since dnsmasq (DHCPv4) does not honour this option */
+					so = ss.taboption('dhcpv6', form.Value, 'dhcpv6_pd_min_len', _('<abbr title="Prefix Delegation">PD</abbr> minimum length'),
+						_('Configures the minimum delegated prefix length assigned to a requesting downstream router, potentially overriding a requested prefix length. If left unspecified, the device will assign the smallest available prefix greater than or equal to the requested prefix.'));
+					so.placeholder = '62';
+					so.datatype = 'range(1,64)';
+					so.depends({ dhcpv6: 'server', dhcpv6_pd: '1' });
+
+					/* This option is used by odhcpd. It can take IPv4/6 entries, although IPv4 DNS servers don't
+					always make sense in an IPv6 environment, they might in a dual stack environment. */
+					so = ss.taboption('ipv6', form.DynamicList, 'dns', _('Announce IPv4/6 DNS servers'),
+						_('Specifies a fixed list of DNS server addresses to announce via DHCPv6.') + '<br/>' +
+						_('Specifies a fixed list of DNS server addresses to announce via RA.') + '<br/>' +
+						_('If left unspecified, the device will announce itself as DNS server unless the <em>Local IPv6 DNS server</em> option is disabled.'));
+					so.datatype = 'ipaddr("nomask")';
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 					so.depends('dhcpv6', 'server');
@@ -918,17 +1174,57 @@ return view.extend({
 					so.depends({ dhcpv6: 'server', dns: /^$/ });
 					so.depends({ dhcpv6: 'hybrid', dns: /^$/, master: '0' });
 
-					so = ss.taboption('ipv6', form.DynamicList, 'domain', _('Announced DNS domains'),
-						_('Specifies a fixed list of DNS search domains to announce via DHCPv6. If left unspecified, the local device DNS search domain will be announced.'));
+					so = ss.taboption('ipv6', form.DynamicList, 'dnr', _('Announce encrypted DNS servers'),
+						_('Specifies a fixed list of encrypted DNS server addresses to announce via DHCPv6/<abbr title="Router Advertisement">RA</abbr> (see %s).')
+						 .format('<a href="%s" target="_blank">RFC9463</a>').format('https://www.rfc-editor.org/rfc/rfc9463') + '<br/>' +
+						_('IPv4 addresses are only supported if <code>odhcpd</code> also handles DHCPv4.') + '<br/>' +
+						_('Syntax: <code>&lt;numeric priority&gt; &lt;domain-name&gt; [IP,...] [SVC parameter ...]</code>') + '<br/>' +
+						_('Example: <code>100 dns.example.com 2001:db8::53,192.168.1.53 alpn=doq port=853</code>') + '<br/>' +
+						_('Note: the <code>_lifetime=&lt;seconds&gt;</code> SVC parameter sets the lifetime of the announced server (use <code>0</code> to indicate a server which should no longer be used).')
+					);
+					so.datatype = 'string';
+					so.depends('ra', 'server');
+					so.depends({ ra: 'hybrid', master: '0' });
+					so.depends('dhcpv6', 'server');
+					so.depends({ dhcpv6: 'hybrid', master: '0' });
+
+					so = ss.taboption('ipv6', form.DynamicList, 'domain', _('Announce DNS domains'),
+						_('Specifies a fixed list of DNS search domains to announce via DHCPv6.'));
 					so.datatype = 'hostname';
 					so.depends('ra', 'server');
 					so.depends({ ra: 'hybrid', master: '0' });
 					so.depends('dhcpv6', 'server');
 					so.depends({ dhcpv6: 'hybrid', master: '0' });
 
+					//This is a DHCPv6 specific odhcpd setting
+					so = ss.taboption('dhcpv6', form.DynamicList, 'ntp', _('NTP Servers'),
+						_('DHCPv6 option 56. %s.', 'DHCPv6 option 56. RFC5908 link').format('<a href="%s" target="_blank">RFC5908</a>').format('https://www.rfc-editor.org/rfc/rfc5908#section-4'));
+					so.datatype = 'host(0)';
+					for(let x of uci.get('system', 'ntp', 'server') || '') {
+						so.value(x);
+					}
+					const local_nets = this.networks.filter(function(n) { return n.getName() != 'loopback' });
+					if(local_nets) {
+						// If ntpd is set up, suggest our IP(v6) also
+						if(uci.get('system', 'ntp', 'enable_server')) {
+							local_nets.forEach(function(n) {
+								n.getIPAddrs().forEach(function(i4) {
+									so.value(i4.split('/')[0]);
+								});
+								n.getIP6Addrs().forEach(function(i6) {
+									so.value(i6.split('/')[0]);
+								});
+							});
+						}
+					}
+					so.optional = true;
+					so.rmempty = true;
+					so.depends('dhcpv6', 'server');
+					so.depends({ dhcpv6: 'hybrid', master: '0' });
 
-					so = ss.taboption('ipv6', cbiRichListValue, 'ndp', _('<abbr title="Neighbour Discovery Protocol">NDP</abbr>-Proxy'),
+					so = ss.taboption('ipv6', form.RichListValue, 'ndp', _('<abbr title="Neighbour Discovery Protocol">NDP</abbr>-Proxy'),
 						_('Configures the operation mode of the NDP proxy service on this interface.'));
+					so.optional = true;
 					so.value('', _('disabled'),
 						_('Do not proxy any <abbr title="Neighbour Discovery Protocol">NDP</abbr> packets.'));
 					so.value('relay', _('relay mode'),
@@ -936,7 +1232,7 @@ return view.extend({
 					so.value('hybrid', _('hybrid mode'), ' ');
 
 
-					so = ss.taboption('ipv6', form.Flag, 'ndproxy_routing', _('Learn routes'), _('Setup routes for proxied IPv6 neighbours.'));
+					so = ss.taboption('ipv6', form.Flag, 'ndproxy_routing', _('Learn routes'), _('Set up routes for proxied IPv6 neighbours.'));
 					so.default = so.enabled;
 					so.depends('ndp', 'relay');
 					so.depends('ndp', 'hybrid');
@@ -962,30 +1258,38 @@ return view.extend({
 					o.depends('peerdns', '0');
 				o.datatype = 'ipaddr';
 
-				o = nettools.replaceOption(s, 'advanced', form.DynamicList, 'dns_search', _('DNS search domains'));
-				if (protoval != 'static')
-					o.depends('peerdns', '0');
-				o.datatype = 'hostname';
-
 				o = nettools.replaceOption(s, 'advanced', form.Value, 'dns_metric', _('DNS weight'), _('The DNS server entries in the local resolv.conf are primarily sorted by the weight specified here'));
 				o.datatype = 'uinteger';
 				o.placeholder = '0';
 
-				o = nettools.replaceOption(s, 'advanced', form.Value, 'metric', _('Use gateway metric'));
+				o = nettools.replaceOption(s, 'advanced', form.Value, 'metric', _('Use gateway metric'),
+					_('Metric is an ordinal, where a gateway with 1 is chosen 1st, 2 is chosen 2nd, 3 is chosen 3rd, etc'));
 				o.datatype = 'uinteger';
 				o.placeholder = '0';
 
+				if (L.hasSystemFeature('mptcp')) {
+					o = nettools.replaceOption(s, 'advanced', form.RichListValue, 'multipath', _('Multi-Path TCP'),
+						_('Multi-Path TCP') + ' %s'.format('<a href="%s" target="_blank">RFC8684</a>').format('https://www.rfc-editor.org/rfc/rfc8684.html') + '<br/>' +
+						_('For packets originating from this device, e.g. VPN.') );
+					o.value('', _('Off'), _('Disables this interface for MPTCP'));
+					o.value('on', _('On'), _('No special configuration'));
+					o.value('master', _('Master'), _('Sets default route for all traffic'));
+					o.value('backup', _('Backup'), _('Hot standby; use this interface; do not forward traffic until no other interface is available (faster)'));
+					o.value('handover', _('Handover'), _('Cold standby; Establish a connection only when no other interface is available (slower)'));
+					o.optional = true;
+				}
+
 				o = nettools.replaceOption(s, 'advanced', form.Value, 'ip4table', _('Override IPv4 routing table'));
 				o.datatype = 'or(uinteger, string)';
-				for (var i = 0; i < rtTables.length; i++)
-					o.value(rtTables[i][1], '%s (%d)'.format(rtTables[i][1], rtTables[i][0]));
+				for (let rt of rtTables)
+					o.value(rt[1], '%s (%d)'.format(rt[1], rt[0]));
 
 				o = nettools.replaceOption(s, 'advanced', form.Value, 'ip6table', _('Override IPv6 routing table'));
 				o.datatype = 'or(uinteger, string)';
-				for (var i = 0; i < rtTables.length; i++)
-					o.value(rtTables[i][1], '%s (%d)'.format(rtTables[i][1], rtTables[i][0]));
+				for (let rt of rtTables)
+					o.value(rt[1], '%s (%d)'.format(rt[1], rt[0]));
 
-				if (protoval == 'dhcpv6') {
+				if (has_sourcefilter(protoval)) {
 					o = nettools.replaceOption(s, 'advanced', form.Flag, 'sourcefilter', _('IPv6 source routing'), _('Automatically handle multiple uplink interfaces using source-based policy routing.'));
 					o.default = o.enabled;
 				}
@@ -1004,24 +1308,24 @@ return view.extend({
 					if (value == null || value == '')
 						return true;
 
-					var n = parseInt(value, 16);
+					const n = parseInt(value, 16);
 
 					if (!/^(0x)?[0-9a-fA-F]+$/.test(value) || isNaN(n) || n >= 0xffffffff)
 						return _('Expecting a hexadecimal assignment hint');
 
 					return true;
 				};
-				for (var i = 33; i <= 64; i++)
+				for (let i = 33; i <= 64; i++)
 					o.depends('ip6assign', String(i));
 
 
 				o = nettools.replaceOption(s, 'advanced', form.DynamicList, 'ip6class', _('IPv6 prefix filter'), _('If set, downstream subnets are only allocated from the given IPv6 prefix classes.'));
 				o.value('local', 'local (%s)'.format(_('Local ULA')));
 
-				var prefixClasses = {};
+				const prefixClasses = {};
 
 				this.networks.forEach(function(net) {
-					var prefixes = net._ubus('ipv6-prefix');
+					const prefixes = net._ubus('ipv6-prefix');
 					if (Array.isArray(prefixes)) {
 						prefixes.forEach(function(pfx) {
 							if (L.isObject(pfx) && typeof(pfx['class']) == 'string') {
@@ -1033,7 +1337,7 @@ return view.extend({
 				});
 
 				Object.keys(prefixClasses).sort().forEach(function(c) {
-					var networks = Object.keys(prefixClasses[c]).sort().join(', ');
+					const networks = Object.keys(prefixClasses[c]).sort().join(', ');
 					o.value(c, (c != networks) ? '%s (%s)'.format(c, networks) : c);
 				});
 
@@ -1046,9 +1350,8 @@ return view.extend({
 				o.datatype = 'uinteger';
 				o.placeholder = '0';
 
-				for (var i = 0; i < s.children.length; i++) {
-					o = s.children[i];
-
+				for (let o of s.children) {
+					const deps = [];
 					switch (o.option) {
 					case 'proto':
 					case 'auto':
@@ -1062,14 +1365,13 @@ return view.extend({
 					case 'stp':
 					case 'type':
 					case '_net_device':
-						var deps = [];
-						for (var j = 0; j < protocols.length; j++) {
-							if (!protocols[j].isVirtual()) {
+						for (let p of protocols) {
+							if (!p.isVirtual()) {
 								if (o.deps.length)
-									for (var k = 0; k < o.deps.length; k++)
-										deps.push(Object.assign({ proto: protocols[j].getProtocol() }, o.deps[k]));
+									for (let od of o.deps)
+										deps.push(Object.assign({ proto: p.getProtocol() }, od));
 								else
-									deps.push({ proto: protocols[j].getProtocol() });
+									deps.push({ proto: p.getProtocol() });
 							}
 						}
 						o.deps = deps;
@@ -1077,8 +1379,8 @@ return view.extend({
 
 					default:
 						if (o.deps.length)
-							for (var j = 0; j < o.deps.length; j++)
-								o.deps[j].proto = protoval;
+							for (let od of o.deps)
+								od.proto = protoval;
 						else
 							o.depends('proto', protoval);
 					}
@@ -1089,8 +1391,8 @@ return view.extend({
 		};
 
 		s.handleModalCancel = function(/* ... */) {
-			var type = uci.get('network', this.activeSection || this.addedSection, 'type'),
-			    device = (type == 'bridge') ? 'br-%s'.format(this.activeSection || this.addedSection) : null;
+			const type = uci.get('network', this.activeSection || this.addedSection, 'type');
+			const device = (type == 'bridge') ? 'br-%s'.format(this.activeSection || this.addedSection) : null;
 
 			uci.sections('network', 'bridge-vlan', function(bvs) {
 				if (device != null && bvs.device == device)
@@ -1101,10 +1403,10 @@ return view.extend({
 		};
 
 		s.handleAdd = function(ev) {
-			var m2 = new form.Map('network'),
-			    s2 = m2.section(form.NamedSection, '_new_'),
-			    protocols = network.getProtocols(),
-			    proto, name, device;
+			const m2 = new form.Map('network');
+			const s2 = m2.section(form.NamedSection, '_new_');
+			const protocols = network.getProtocols();
+			let proto, name, device;
 
 			protocols.sort(function(a, b) {
 				return L.naturalCompare(a.getProtocol(), b.getProtocol());
@@ -1125,9 +1427,10 @@ return view.extend({
 				if (uci.get('network', value) != null)
 					return _('The interface name is already used');
 
-				var pr = network.getProtocol(proto.formvalue(section_id), value),
-				    ifname = pr.isVirtual() ? '%s-%s'.format(pr.getProtocol(), value) : 'br-%s'.format(value);
-
+				/* // The kernel takes max 15 character names. We can skip this.
+				const pr = network.getProtocol(proto.formvalue(section_id), value);
+				const ifname = pr.isVirtual() ? '%s-%s'.format(pr.getProtocol(), value) : 'br-%s'.format(value);
+				*/
 				if (value.length > 15)
 					return _('The interface name is too long');
 
@@ -1135,17 +1438,20 @@ return view.extend({
 			};
 
 			proto = s2.option(form.ListValue, 'proto', _('Protocol'));
-			proto.validate = name.validate;
+			proto.onchange = function(ev, section_id, value) {
+				const elem = name.getUIElement(section_id);
+				elem.triggerValidation();
+			};
 
 			device = s2.option(widgets.DeviceSelect, 'device', _('Device'));
 			device.noaliases = false;
 			device.optional = false;
 
-			for (var i = 0; i < protocols.length; i++) {
-				proto.value(protocols[i].getProtocol(), protocols[i].getI18n());
+			for (let p of protocols) {
+				proto.value(p.getProtocol(), p.getI18n());
 
-				if (!protocols[i].isVirtual())
-					device.depends('proto', protocols[i].getProtocol());
+				if (!p.isVirtual())
+					device.depends('proto', p.getProtocol());
 			}
 
 			m2.render().then(L.bind(function(nodes) {
@@ -1159,9 +1465,9 @@ return view.extend({
 						E('button', {
 							'class': 'cbi-button cbi-button-positive important',
 							'click': ui.createHandlerFn(this, function(ev) {
-								var nameval = name.isValid('_new_') ? name.formvalue('_new_') : null,
-								    protoval = proto.isValid('_new_') ? proto.formvalue('_new_') : null,
-								    protoclass = protoval ? network.getProtocol(protoval, nameval) : null;
+								const nameval = name.isValid('_new_') ? name.formvalue('_new_') : null;
+								const protoval = proto.isValid('_new_') ? proto.formvalue('_new_') : null;
+								const protoclass = protoval ? network.getProtocol(protoval, nameval) : null;
 
 								if (nameval == null || protoval == null || nameval == '' || protoval == '')
 									return;
@@ -1175,7 +1481,7 @@ return view.extend({
 									}
 
 									return m.save(function() {
-										var section_id = uci.add('network', 'interface', nameval);
+										const section_id = uci.add('network', 'interface', nameval);
 
 										protoclass.set('proto', protoval);
 										protoclass.addDevice(device.formvalue('_new_'));
@@ -1204,13 +1510,13 @@ return view.extend({
 		o = s.option(form.DummyValue, '_ifacebox');
 		o.modalonly = false;
 		o.textvalue = function(section_id) {
-			var net = this.section.networks.filter(function(n) { return n.getName() == section_id })[0],
-			    zone = net ? this.section.zones.filter(function(z) { return !!z.getNetworks().filter(function(n) { return n == section_id })[0] })[0] : null;
+			const net = this.section.networks.filter(function(n) { return n.getName() == section_id })[0];
+			const zone = net ? this.section.zones.filter(function(z) { return !!z.getNetworks().filter(function(n) { return n == section_id })[0] })[0] : null;
 
 			if (!net)
 				return;
 
-			var node = E('div', { 'class': 'ifacebox' }, [
+			const node = E('div', { 'class': 'ifacebox' }, [
 				E('div', {
 					'class': 'ifacebox-head',
 					'style': firewall.getZoneColorStyle(zone),
@@ -1222,7 +1528,7 @@ return view.extend({
 					'data-network': section_id
 				}, [
 					E('img', {
-						'src': L.resource('icons/ethernet_disabled.png'),
+						'src': L.resource('icons/ethernet_disabled.svg'),
 						'style': 'width:16px; height:16px'
 					}),
 					E('br'), E('small', '?')
@@ -1237,12 +1543,12 @@ return view.extend({
 		o = s.option(form.DummyValue, '_ifacestat');
 		o.modalonly = false;
 		o.textvalue = function(section_id) {
-			var net = this.section.networks.filter(function(n) { return n.getName() == section_id })[0];
+			const net = this.section.networks.filter(function(n) { return n.getName() == section_id })[0];
 
 			if (!net)
 				return;
 
-			var node = E('div', { 'id': '%s-ifc-description'.format(section_id) });
+			const node = E('div', { 'id': '%s-ifc-description'.format(section_id) });
 
 			render_status(node, net, false);
 
@@ -1268,36 +1574,36 @@ return view.extend({
 		s.addbtntitle = _('Add device configuration…');
 
 		s.cfgsections = function() {
-			var sections = uci.sections('network', 'device'),
-			    section_ids = sections.sort(function(a, b) { return L.naturalCompare(a.name, b.name) }).map(function(s) { return s['.name'] });
+			const sections = uci.sections('network', 'device');
+			const section_ids = sections.sort(function(a, b) { return L.naturalCompare(a.name, b.name) }).map(function(s) { return s['.name'] });
 
-			for (var i = 0; i < netDevs.length; i++) {
-				if (sections.filter(function(s) { return s.name == netDevs[i].getName() }).length)
+			for (let nd of netDevs) {
+				if (sections.filter(function(s) { return s.name == nd.getName() }).length)
 					continue;
 
-				if (netDevs[i].getType() == 'wifi' && !netDevs[i].isUp())
+				if (nd.getType() == 'wifi' && !nd.isUp())
 					continue;
 
 				/* Unless http://lists.openwrt.org/pipermail/openwrt-devel/2020-July/030397.html is implemented,
 				   we cannot properly redefine bridges as devices, so filter them away for now... */
 
-				var m = netDevs[i].isBridge() ? netDevs[i].getName().match(/^br-([A-Za-z0-9_]+)$/) : null,
-				    s = m ? uci.get('network', m[1]) : null;
+				const m = nd.isBridge() ? nd.getName().match(/^br-([A-Za-z0-9_]+)$/) : null;
+				const s = m ? uci.get('network', m[1]) : null;
 
 				if (s && s['.type'] == 'interface' && s.type == 'bridge')
 					continue;
 
-				section_ids.push('dev:%s'.format(netDevs[i].getName()));
+				section_ids.push('dev:%s'.format(nd.getName()));
 			}
 
 			return section_ids;
 		};
 
 		s.renderMoreOptionsModal = function(section_id, ev) {
-			var m = section_id.match(/^dev:(.+)$/);
+			const m = section_id.match(/^dev:(.+)$/);
 
 			if (m) {
-				var devtype = getDevType(section_id);
+				const devtype = getDevType(section_id);
 
 				section_id = uci.add('network', 'device');
 
@@ -1311,8 +1617,8 @@ return view.extend({
 		};
 
 		s.renderRowActions = function(section_id) {
-			var trEl = this.super('renderRowActions', [ section_id, _('Configure…') ]),
-			    deleteBtn = trEl.querySelector('button:last-child');
+			const trEl = this.super('renderRowActions', [ section_id, _('Configure…') ]);
+			const deleteBtn = trEl.querySelector('button:last-child');
 
 			deleteBtn.firstChild.data = _('Unconfigure');
 			deleteBtn.setAttribute('title', _('Remove related device settings from the configuration'));
@@ -1322,21 +1628,59 @@ return view.extend({
 		};
 
 		s.modaltitle = function(section_id) {
-			var m = section_id.match(/^dev:(.+)$/),
-			    name = m ? m[1] : uci.get('network', section_id, 'name');
+			const m = section_id.match(/^dev:(.+)$/);
+			const name = m ? m[1] : uci.get('network', section_id, 'name');
 
 			return name ? '%s: %q'.format(getDevTypeDesc(section_id), name) : _('Add device configuration');
 		};
 
 		s.addModalOptions = function(s) {
-			var isNew = (uci.get('network', s.section, 'name') == null),
-			    dev = getDevice(s.section);
+			const isNew = (uci.get('network', s.section, 'name') == null);
+			const dev = getDevice(s.section);
+			const devName = dev ? dev.getName() : null;
+			const parseLinks = (data) => data.reduce((a, b) => {
+				const data = speedBaseParse.exec(b);
+				if (data && data.length == 4) {
+					const [_, speed, base, duplex] = data;
+					const newSpeed = {
+						speed: Number(speed),
+						base: base.toUpperCase(),
+						duplex: duplex.toLowerCase() == "h" ? "half" : "full",
+					}
+					if (!a.some(previusSpeed => previusSpeed.speed == newSpeed.speed &&
+						previusSpeed.duplex == newSpeed.duplex &&
+						previusSpeed.base == newSpeed.base))
+						return a.concat(newSpeed)
+				}
+				return a;
+			}, []).sort(({ speed: p }, { speed: n }) => p > n ? 1 : -1);
 
-			nettools.addDeviceOptions(s, dev, isNew);
+			/* Query PSE status from netifd to determine if device has PSE capability */
+			if (devName) {
+				return L.resolveDefault(callNetworkDeviceStatus(devName), {}).then(({
+					pse,
+					"link-advertising": linkAdvertising,
+					"link-partner-advertising": linkPartnerAdvertising,
+					"link-supported": linkSupported
+				}) => {
+					const hasPSE = (pse != null);
+					let phy_links = ([
+						...(linkAdvertising || []),
+						...(linkPartnerAdvertising || []),
+						...(linkSupported || [])
+					]);
+					if (!phy_links || phy_links.length === 0)
+						phy_links = phyLinkSpeeds;
+					nettools.addDeviceOptions(s, dev, isNew, rtTables, hasPSE, parseLinks(phy_links));
+				});
+			} else {
+				nettools.addDeviceOptions(s, dev, isNew, rtTables, false, parseLinks(phyLinkSpeeds));
+				return Promise.resolve();
+			}
 		};
 
 		s.handleModalCancel = function(map /*, ... */) {
-			var name = uci.get('network', this.addedSection, 'name')
+			const name = uci.get('network', this.addedSection, 'name');
 
 			uci.sections('network', 'bridge-vlan', function(bvs) {
 				if (name != null && bvs.device == name)
@@ -1344,15 +1688,18 @@ return view.extend({
 			});
 
 			if (map.addedVLANs)
-				for (var i = 0; i < map.addedVLANs.length; i++)
-					uci.remove('network', map.addedVLANs[i]);
+				for (let mav of map.addedVLANs)
+					uci.remove('network', mav);
+
+			if (this.addedSection)
+				uci.remove('network', this.addedSection);
 
 			return form.GridSection.prototype.handleModalCancel.apply(this, arguments);
 		};
 
 		s.handleRemove = function(section_id /*, ... */) {
-			var name = uci.get('network', section_id, 'name'),
-			    type = uci.get('network', section_id, 'type');
+			const name = uci.get('network', section_id, 'name');
+			const type = uci.get('network', section_id, 'type');
 
 			if (name != null && type == 'bridge') {
 				uci.sections('network', 'bridge-vlan', function(bvs) {
@@ -1365,16 +1712,16 @@ return view.extend({
 		};
 
 		function getDevice(section_id) {
-			var m = section_id.match(/^dev:(.+)$/),
-			    name = m ? m[1] : uci.get('network', section_id, 'name');
+			const m = section_id.match(/^dev:(.+)$/);
+			const name = m ? m[1] : uci.get('network', section_id, 'name');
 
 			return netDevs.filter(function(d) { return d.getName() == name })[0];
 		}
 
 		function getDevType(section_id) {
-			var dev = getDevice(section_id),
-			    cfg = uci.get('network', section_id),
-			    type = cfg ? (uci.get('network', section_id, 'type') || 'ethernet') : (dev ? dev.getType() : '');
+			const dev = getDevice(section_id);
+			const cfg = uci.get('network', section_id);
+			const type = cfg ? (uci.get('network', section_id, 'type') || 'ethernet') : (dev ? dev.getType() : '');
 
 			switch (type) {
 			case '':
@@ -1387,6 +1734,9 @@ return view.extend({
 			case '8021ad':
 				return '8021ad';
 
+			case 'bonding':
+				return 'bonding';
+
 			case 'bridge':
 				return 'bridge';
 
@@ -1398,6 +1748,9 @@ return view.extend({
 
 			case 'veth':
 				return 'veth';
+
+			case 'vrf':
+				return 'vrf';
 
 			case 'wifi':
 			case 'alias':
@@ -1419,6 +1772,9 @@ return view.extend({
 			case '8021ad':
 				return _('VLAN (802.1ad)');
 
+			case 'bonding':
+				return _('Aggregation device');
+
 			case 'bridge':
 				return _('Bridge device');
 
@@ -1431,6 +1787,9 @@ return view.extend({
 			case 'veth':
 				return _('Virtual Ethernet');
 
+			case 'vrf':
+				return _('Virtual Routing and Forwarding (VRF)');
+
 			default:
 				return _('Network device');
 			}
@@ -1439,9 +1798,9 @@ return view.extend({
 		o = s.option(form.DummyValue, 'name', _('Device'));
 		o.modalonly = false;
 		o.textvalue = function(section_id) {
-			var dev = getDevice(section_id),
-			    ext = section_id.match(/^dev:/),
-			    icon = render_iface(dev);
+			const dev = getDevice(section_id);
+			const ext = section_id.match(/^dev:/);
+			const icon = render_iface(dev);
 
 			if (ext)
 				icon.querySelector('img').style.opacity = '.5';
@@ -1458,12 +1817,47 @@ return view.extend({
 		o.textvalue = getDevTypeDesc;
 		o.modalonly = false;
 
+		o = s.option(form.DummyValue, '_speed', _('Link Speed'));
+		o.modalonly = false;
+		o.textvalue = function(section_id) {
+			const dev = getDevice(section_id);
+
+			if (!dev || !dev.getCarrier())
+				return '-';
+
+			const cur = dev.getSpeed();
+
+			/* getSpeed() returns Mbit/s, -1 with carrier but no negotiated rate, or null if unsupported */
+			if (!(cur > 0))
+				return '-';
+
+			/* %1000mBit/s would render 1 Gbit as "1000.00 MBit/s" (strict scale step + forced decimals), so format directly */
+			const fmt = (mbit) => (mbit >= 1000) ? (mbit / 1000) + ' Gbit/s' : mbit + ' Mbit/s';
+
+			/* distinct ethtool-supported link speeds, e.g. 1000baseT-F => 1000, sorted ascending */
+			const st = devStatus ? devStatus[dev.getName()] : null;
+			const supported = (st ? L.toArray(st['link-supported']) : []).reduce(function(speeds, mode) {
+				const n = mode.match(/^(\d+)base/);
+				if (n && speeds.indexOf(+n[1]) < 0)
+					speeds.push(+n[1]);
+				return speeds;
+			}, []).sort((a, b) => a - b);
+
+			/* current speed in the cell; all supported speeds in the tooltip when known */
+			if (supported.length)
+				return E('span', {
+					'data-tooltip': _('Supported link speeds: %s').format(supported.map(fmt).join(', '))
+				}, [ fmt(cur) ]);
+
+			return fmt(cur);
+		};
+
 		o = s.option(form.DummyValue, 'macaddr', _('MAC Address'));
 		o.modalonly = false;
 		o.textvalue = function(section_id) {
-			var dev = getDevice(section_id),
-			    val = uci.get('network', section_id, 'macaddr'),
-			    mac = dev ? dev.getMAC() : null;
+			const dev = getDevice(section_id);
+			const val = uci.get('network', section_id, 'macaddr');
+			const mac = dev ? dev.getMAC() : null;
 
 			return val ? E('strong', {
 				'data-tooltip': _('The value is overridden by configuration.')
@@ -1473,9 +1867,9 @@ return view.extend({
 		o = s.option(form.DummyValue, 'mtu', _('MTU'));
 		o.modalonly = false;
 		o.textvalue = function(section_id) {
-			var dev = getDevice(section_id),
-			    val = uci.get('network', section_id, 'mtu'),
-			    mtu = dev ? dev.getMTU() : null;
+			const dev = getDevice(section_id);
+			const val = uci.get('network', section_id, 'mtu');
+			const mtu = dev ? dev.getMTU() : null;
 
 			return val ? E('strong', {
 				'data-tooltip': _('The value is overridden by configuration.')
@@ -1486,33 +1880,76 @@ return view.extend({
 		s.addremove = false;
 		s.anonymous = true;
 
-		o = s.option(form.Value, 'ula_prefix', _('IPv6 ULA-Prefix'), _('Unique Local Address - in the range <code>fc00::/7</code>.  Typically only within the &#8216;local&#8217; half <code>fd00::/8</code>. ULA for IPv6 is analogous to IPv4 private network addressing. This prefix is randomly generated at first install.'));
+		o = s.option(form.Value, 'ula_prefix', _('IPv6 ULA-Prefix'),
+			_('Unique Local Address (%s) - prefix <code>fd00::/8</code> (the L bit is always 1).').format('<a href="%s" target="_blank">RFC4193</a>').format('https://datatracker.ietf.org/doc/html/rfc4193#section-3') + ' ' +
+			_('ULA for IPv6 is analogous to IPv4 private network addressing.') + ' ' +
+			_('This prefix is randomly generated at first install.'));
 		o.datatype = 'cidr6';
 
-		o = s.option(form.Flag, 'packet_steering', _('Packet Steering'), _('Enable packet steering across all CPUs. May help or hinder network speed.'));
+		o = s.option(form.Value, 'dhcp_default_duid', _('Default DUID'),
+			_('The default <abbr title="DHCP Unique Identifier">DUID</abbr> for this device, used when acting as a DHCP server or client. The client identifier can be overridden on a per-interface basis.') + '<br />' +
+			_('This identifier is randomly generated the first time the device is booted.'));
+		o.datatype = 'and(rangelength(6,260),hexstring)';
+
+		if (L.hasSystemFeature('mptcp')) {
+			o = s.option(form.Flag, 'multipath', _('Multi-Path TCP'), _('For packets originating from this device, e.g. VPN.'));
+			o.optional = true;
+		}
+
+		const l3mdevhelp1 = _('%s services running on this device in the default VRF context (ie., not bound to any VRF device) shall work across all VRF domains.');
+		const l3mdevhelp2 = _('Off means VRF traffic will be handled exclusively by sockets bound to VRFs.');
+
+		o = s.option(form.Flag, 'tcp_l3mdev', _('TCP Layer 3 Master Device (tcp_l3mdev) accept'),
+			l3mdevhelp1.format('TCP') + '<br/>' +
+			l3mdevhelp2);
+
+		o = s.option(form.Flag, 'udp_l3mdev', _('UDP Layer 3 Master Device (udp_l3mdev) accept'),
+			l3mdevhelp1.format('UDP') + '<br/>' +
+			l3mdevhelp2);
+
+		o = s.option(form.ListValue, 'packet_steering', _('Packet Steering'), _('Enable packet steering across CPUs. May help or hinder network speed.'));
+		o.value('0', _('Disabled'));
+		o.value('1',_('Enabled'));
+		o.value('2',_('Enabled (all CPUs)'));
+		o.default = '1';
 		o.optional = true;
 
+		o = s.option(form.Value, 'steering_flows', _('Steering flows (<abbr title="Receive Packet Steering">RPS</abbr>)'),
+			_('Directs packet flows to specific CPUs where the local socket owner listens (the local service).') + ' ' +
+			_('Note: this setting is for local services on the device only (not for forwarding).'));
+		o.value('', _('Standard: none'));
+		o.value('128', _('Suggested: 128'));
+		o.value('256', _('256'));
+		o.depends('packet_steering', '1');
+		o.depends('packet_steering', '2');
+		o.datatype = 'uinteger';
 
 		if (dslModemType != null) {
 			s = m.section(form.TypedSection, 'dsl', _('DSL'));
 			s.anonymous = true;
 
 			o = s.option(form.ListValue, 'annex', _('Annex'));
-			o.value('a', _('Annex A + L + M (all)'));
-			o.value('b', _('Annex B (all)'));
-			o.value('j', _('Annex J (all)'));
-			o.value('m', _('Annex M (all)'));
-			o.value('bdmt', _('Annex B G.992.1'));
-			o.value('b2', _('Annex B G.992.3'));
-			o.value('b2p', _('Annex B G.992.5'));
+			if (dslModemType == 'vdsl') {
+				o.value('a', _('ADSL (all variants) Annex A/L/M + VDSL2 Annex A/B/C'));
+				o.value('b', _('ADSL (all variants) Annex B + VDSL2 Annex A/B/C'));
+				o.value('j', _('ADSL (all variants) Annex B/J + VDSL2 Annex A/B/C'));
+			} else {
+				o.value('a', _('ADSL (all variants) Annex A/L/M'));
+				o.value('b', _('ADSL (all variants) Annex B'));
+				o.value('j', _('ADSL (all variants) Annex B/J'));
+			}
+			o.value('m', _('ADSL (all variants) Annex M'));
 			o.value('at1', _('ANSI T1.413'));
-			o.value('admt', _('Annex A G.992.1'));
-			o.value('alite', _('Annex A G.992.2'));
-			o.value('a2', _('Annex A G.992.3'));
-			o.value('a2p', _('Annex A G.992.5'));
-			o.value('l', _('Annex L G.992.3 POTS 1'));
-			o.value('m2', _('Annex M G.992.3'));
-			o.value('m2p', _('Annex M G.992.5'));
+			o.value('admt', _('ADSL (G.992.1) Annex A'));
+			o.value('bdmt', _('ADSL (G.992.1) Annex B'));
+			o.value('alite', _('Splitterless ADSL (G.992.2) Annex A'));
+			o.value('a2', _('ADSL2 (G.992.3) Annex A'));
+			o.value('b2', _('ADSL2 (G.992.3) Annex B'));
+			o.value('l', _('ADSL2 (G.992.3) Annex L'));
+			o.value('m2', _('ADSL2 (G.992.3) Annex M'));
+			o.value('a2p', _('ADSL2+ (G.992.5) Annex A'));
+			o.value('b2p', _('ADSL2+ (G.992.5) Annex B'));
+			o.value('m2p', _('ADSL2+ (G.992.5) Annex M'));
 
 			o = s.option(form.ListValue, 'tone', _('Tone'));
 			o.value('', _('auto'));
@@ -1535,7 +1972,7 @@ return view.extend({
 				o = s.option(form.ListValue, 'ds_snr_offset', _('Downstream SNR offset'));
 				o.default = '0';
 
-				for (var i = -100; i <= 100; i += 5)
+				for (let i = -100; i <= 100; i += 5)
 					o.value(i, _('%.1f dB').format(i / 10));
 			}
 
@@ -1552,18 +1989,18 @@ return view.extend({
 			s.addbtntitle = _('Add ATM Bridge');
 
 			s.handleAdd = function(ev) {
-				var sections = uci.sections('network', 'atm-bridge'),
-				    max_unit = -1;
+				const sections = uci.sections('network', 'atm-bridge');
+				let max_unit = -1;
 
-				for (var i = 0; i < sections.length; i++) {
-					var unit = +sections[i].unit;
+				for (let s of sections) {
+					const unit = +s.unit;
 
 					if (!isNaN(unit) && unit > max_unit)
 						max_unit = unit;
 				}
 
 				return this.map.save(function() {
-					var sid = uci.add('network', 'atm-bridge');
+					const sid = uci.add('network', 'atm-bridge');
 
 					uci.set('network', sid, 'unit', max_unit + 1);
 					uci.set('network', sid, 'atmdev', 0);
@@ -1595,24 +2032,24 @@ return view.extend({
 
 		return m.render().then(L.bind(function(m, nodes) {
 			poll.add(L.bind(function() {
-				var section_ids = m.children[0].cfgsections(),
-				    tasks = [];
+				const section_ids = m.children[0].cfgsections();
+				const tasks = [];
 
-				for (var i = 0; i < section_ids.length; i++) {
-					var row = nodes.querySelector('.cbi-section-table-row[data-sid="%s"]'.format(section_ids[i])),
-					    dsc = row.querySelector('[data-name="_ifacestat"] > div'),
-					    btn1 = row.querySelector('.cbi-section-actions .reconnect'),
-					    btn2 = row.querySelector('.cbi-section-actions .down');
+				for (let sid of section_ids) {
+					const row = nodes.querySelector('.cbi-section-table-row[data-sid="%s"]'.format(sid));
+					const dsc = row.querySelector('[data-name="_ifacestat"] > div');
+					const btn1 = row.querySelector('.cbi-section-actions .reconnect');
+					const btn2 = row.querySelector('.cbi-section-actions .down');
 
 					if (dsc.getAttribute('reconnect') == '') {
 						dsc.setAttribute('reconnect', '1');
-						tasks.push(fs.exec('/sbin/ifup', [section_ids[i]]).catch(function(e) {
+						tasks.push(fs.exec('/sbin/ifup', [sid]).catch(function(e) {
 							ui.addNotification(null, E('p', e.message));
 						}));
 					}
 					else if (dsc.getAttribute('disconnect') == '') {
 						dsc.setAttribute('disconnect', '1');
-						tasks.push(fs.exec('/sbin/ifdown', [section_ids[i]]).catch(function(e) {
+						tasks.push(fs.exec('/sbin/ifdown', [sid]).catch(function(e) {
 							ui.addNotification(null, E('p', e.message));
 						}));
 					}

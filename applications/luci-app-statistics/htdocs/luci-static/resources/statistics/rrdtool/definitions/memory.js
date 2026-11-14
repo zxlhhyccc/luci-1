@@ -5,14 +5,16 @@
 
 'use strict';
 'require baseclass';
+'require uci';
 
 return baseclass.extend({
 	title: _('Memory'),
 
-	rrdargs: function(graph, host, plugin, plugin_instance, dtype) {
-		var p = [];
+	rrdargs(graph, host, plugin, plugin_instance, dtype) {
+		const p = [];
+		const hide_free = uci.get("luci_statistics", "collectd_memory", "HideFree") == "1" ? true : false;
 
-		var memory = {
+		const memory = {
 			title: "%H: Memory usage",
 			vlabel: "MB",
 			number_format: "%5.1lf%s",
@@ -21,7 +23,7 @@ return baseclass.extend({
 			data: {
 				instances: {
 					memory: [
-						"free",
+						...(hide_free ? [] : ["free"]),
 						"buffered",
 						"cached",
 						"used"
@@ -49,7 +51,7 @@ return baseclass.extend({
 			}
 		};
 
-		var percent = {
+		const percent = {
 			title: "%H: Memory usage",
 			vlabel: "Percent",
 			number_format: "%5.1lf%%",
@@ -58,7 +60,7 @@ return baseclass.extend({
 			data: {
 				instances: {
 					percent: [
-						"free",
+						...(hide_free ? [] : ["free"]),
 						"buffered",
 						"cached",
 						"used"
@@ -85,12 +87,12 @@ return baseclass.extend({
 			}
 		};
 
-		var types = graph.dataTypes(host, plugin, plugin_instance);
+		const types = graph.dataTypes(host, plugin, plugin_instance);
 
-		for (var i = 0; i < types.length; i++)
-			if (types[i] == 'percent')
+		for (let type of types)
+			if (type == 'percent')
 				p.push(percent);
-			else if (types[i] == 'memory')
+			else if (type == 'memory')
 				p.push(memory);
 
 		return p;

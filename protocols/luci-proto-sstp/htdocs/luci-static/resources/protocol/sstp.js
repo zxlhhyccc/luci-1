@@ -13,7 +13,7 @@ return network.registerProtocol('sstp', {
 		return this._ubus('l3_device') || 'sstp-%s'.format(this.sid);
 	},
 
-	getOpkgPackage: function() {
+	getPackageName: function() {
 		return 'sstp-client';
 	},
 
@@ -40,6 +40,10 @@ return network.registerProtocol('sstp', {
 
 		o = s.taboption('general', form.Value, 'server', _('SSTP Server'));
 		o.datatype = 'host';
+
+		o = s.taboption('general', form.Value, 'port', _('SSTP Port'));
+		o.placeholder = '443';
+		o.datatype = 'port';
 
 		o = s.taboption('general', form.Value, 'username', _('PAP/CHAP username'));
 

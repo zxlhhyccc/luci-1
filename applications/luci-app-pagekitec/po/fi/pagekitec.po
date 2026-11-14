@@ -1,29 +1,27 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2021-06-18 19:32+0000\n"
-"Last-Translator: Demian Wright <wright.demian+weblate@gmail.com>\n"
+"PO-Revision-Date: 2025-04-30 09:26+0000\n"
+"Last-Translator: Ricky Tigg <ricky.tigg@gmail.com>\n"
 "Language-Team: Finnish <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationspagekitec/fi/>\n"
 "Language: fi\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.7\n"
+"X-Generator: Weblate 5.12-dev\n"
+
+#: applications/luci-app-pagekitec/htdocs/luci-static/resources/view/pagekitec.js:9
+msgid ""
+"<p/><em>Note: this web configurator only supports some very very basic uses "
+"of pagekite.</em>"
+msgstr ""
 
 #: applications/luci-app-pagekitec/htdocs/luci-static/resources/view/pagekitec.js:5
 msgid ""
 "<p/>Note: you need a working PageKite account, or at least, your own running "
-"front end for this form to work. Visit <a href='https://pagekite.net/"
-"home/'>your account</a> to set up a name for your router and get a secret "
-"key for the connection.<p/><em>Note: this web configurator only supports "
-"some very very basic uses of pagekite.</em>"
+"front end for this form to work. Visit %s to set up a name for your router "
+"and get a secret key for the connection."
 msgstr ""
-"<p/>Huomaa: tarvitset toimivan PageKite-tilin tai ainakin oman "
-"käyttöliittymän, jotta tämä lomake toimisi. Käy <a href='https://pagekite."
-"net/home/'>sinun tilisi</a>-sivulla asettaaksesi reitittimellesi nimen ja "
-"saadaksesi salaisen avaimen yhteyttä varten.<p/><em>Huomaa: tämä "
-"verkkokonfiguraattori tukee vain joitakin hyvin yksinkertaisia PageKite-"
-"käyttötapoja.</em>"
 
 #: applications/luci-app-pagekitec/htdocs/luci-static/resources/view/pagekitec.js:29
 msgid "Basic HTTP"
@@ -57,6 +55,10 @@ msgstr ""
 msgid "Enable a tunnel to the local SSH server"
 msgstr "Käytä tunnelia paikalliseen SSH-palvelimeen"
 
+#: applications/luci-app-pagekitec/root/usr/share/rpcd/acl.d/luci-app-pagekitec.json:3
+msgid "Grant UCI access for luci-app-pagekitec"
+msgstr "Myönnä UCI-pääsy luci-app-pagekitecille"
+
 #: applications/luci-app-pagekitec/htdocs/luci-static/resources/view/pagekitec.js:22
 msgid "Kite Name"
 msgstr "Kite-nimi"
@@ -81,3 +83,21 @@ msgid ""
 msgstr ""
 "Staattinen asennus, poista FE:n vikasietoisuus ja DDNS-päivitykset käytöstä, "
 "aseta tämä, jos käytät omaa käyttöliittymää ilman pagekite.me-tiliä"
+
+#: applications/luci-app-pagekitec/htdocs/luci-static/resources/view/pagekitec.js:8
+msgid "your account"
+msgstr ""
+
+#~ msgid ""
+#~ "<p/>Note: you need a working PageKite account, or at least, your own "
+#~ "running front end for this form to work. Visit <a href='https://"
+#~ "pagekite.net/home/'>your account</a> to set up a name for your router and "
+#~ "get a secret key for the connection.<p/><em>Note: this web configurator "
+#~ "only supports some very very basic uses of pagekite.</em>"
+#~ msgstr ""
+#~ "<p/>Huomaa: tarvitset toimivan PageKite-tilin tai ainakin oman "
+#~ "käyttöliittymän, jotta tämä lomake toimisi. Käy <a href='https://"
+#~ "pagekite.net/home/'>sinun tilisi</a>-sivulla asettaaksesi reitittimellesi "
+#~ "nimen ja saadaksesi salaisen avaimen yhteyttä varten.<p/><em>Huomaa: tämä "
+#~ "verkkokonfiguraattori tukee vain joitakin hyvin yksinkertaisia PageKite-"
+#~ "käyttötapoja.</em>"

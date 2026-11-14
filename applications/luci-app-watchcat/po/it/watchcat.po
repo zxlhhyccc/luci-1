@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"PO-Revision-Date: 2021-09-08 07:33+0000\n"
-"Last-Translator: pisquan8 <cimurro@outlook.de>\n"
+"PO-Revision-Date: 2024-04-19 13:18+0000\n"
+"Last-Translator: ettore <hettore.giacomini@gmail.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationswatchcat/it/>\n"
 "Language: it\n"
@@ -10,33 +10,48 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.8.1-dev\n"
+"X-Generator: Weblate 5.5-dev\n"
+
+#: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:94
+msgid ""
+"<i>Applies to Ping Reboot and Periodic Reboot modes</i> <br /> When "
+"rebooting the router, the service will trigger a soft reboot. Entering a non-"
+"zero value here will trigger a delayed hard reboot if the soft reboot were "
+"to fail. Enter the number of seconds to wait for the soft reboot to fail or "
+"use 0 to disable the forced reboot delay."
+msgstr ""
+"<i>Si applica a Ping Reboot e Periodic Reboot</i> <br /> Durante il riavvio "
+"del router, il servizio avvierà un soft reboot. Inserendo qui un valore non "
+"zero scatterà un hard reboot ritardato se il soft reboot dovesse fallire. "
+"Inserire il numero di secondi per attendere il fallimento del soft reboot o "
+"usare 0 per disabilitare il ritardo del riavvio forzato."
+
+#: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:111
+msgid ""
+"<i>Applies to Ping Reboot and Restart Interface modes</i> <br /> If using "
+"ModemManager, you can have Watchcat restart your ModemManager interface by "
+"specifying its name."
+msgstr ""
+"<i>Si applica alle modalità Riavvio Ping e Riavvia Interfaccia</i> <br /> Se "
+"si utilizza ModemManager, è possibile far riavviare a Watchcat l'interfaccia "
+"di ModemManager specificandone il nome."
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:104
 msgid ""
 "<i>Applies to Ping Reboot, Restart Interface, and Run Script modes</i> <br /"
 "> Specify the interface to monitor and react if a ping over it fails."
 msgstr ""
+"<i>Si applica a Ping Reboot, Restart Interface e Run Script</i> <br /> "
+"Specificare l'interfaccia da monitorare e reagisci se il ping verso di essa "
+"fallisce."
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:60
 msgid "Address family for pinging the host"
-msgstr ""
+msgstr "Famiglia di indirizzi per il ping dell'host"
 
-#: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:94
-msgid ""
-"Applies to Ping Reboot and Periodic Reboot modes</i> <br /> When rebooting "
-"the router, the service will trigger a soft reboot. Entering a non-zero "
-"value here will trigger a delayed hard reboot if the soft reboot were to "
-"fail. Enter the number of seconds to wait for the soft reboot to fail or use "
-"0 to disable the forced reboot delay."
-msgstr ""
-
-#: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:111
-msgid ""
-"Applies to Ping Reboot and Restart Interface modes</i> <br /> If using "
-"ModemManager, you can have Watchcat restart your ModemManger interface by "
-"specifying its name."
-msgstr ""
+#: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:65
+msgid "Any"
+msgstr "Qualsiasi"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:84
 msgid "Big: 248 bytes"
@@ -66,8 +81,8 @@ msgid ""
 msgstr ""
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:52
-msgid "Host To Check"
-msgstr "Host da controllare"
+msgid "Hosts To Check"
+msgstr ""
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:71
 msgid ""
@@ -84,7 +99,7 @@ msgid "Huge: 1492 bytes"
 msgstr "Enorme: 1492 byte"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:52
-msgid "IP address or hostname to ping."
+msgid "IP addresses or hostnames to ping."
 msgstr ""
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:118
@@ -92,6 +107,8 @@ msgid ""
 "If using ModemManager, then before restarting the interface, set the modem "
 "to be allowed to use any band."
 msgstr ""
+"Se si utilizza ModemManager, prima di riavviare l'interfaccia, impostare il "
+"modem in modo che possa utilizzare qualsiasi banda."
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:41
 msgid ""
@@ -125,7 +142,7 @@ msgstr "Modalità"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:110
 msgid "Name of ModemManager Interface"
-msgstr ""
+msgstr "Nome dell'interfaccia ModemManager"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:40
 msgid "Period"
@@ -136,7 +153,6 @@ msgid "Periodic Reboot"
 msgstr "Riavvio periodico"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:80
-#, fuzzy
 msgid "Ping Packet Size"
 msgstr "Dimensione del pacchetto Ping"
 
@@ -160,11 +176,11 @@ msgstr "Riavvia interfaccia"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:30
 msgid "Run Script"
-msgstr ""
+msgstr "Eseguire lo script"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:33
 msgid "Script to run"
-msgstr ""
+msgstr "Script da eseguire"
 
 #: applications/luci-app-watchcat/htdocs/luci-static/resources/view/watchcat.js:34
 msgid ""
@@ -200,5 +216,8 @@ msgstr "Watchcat"
 msgid "Windows: 32 bytes"
 msgstr "Windows: 32 bytes"
 
-#~ msgid "Grant UCI access for luci-app-watchcat"
-#~ msgstr "Concedi accesso UCI per luci-app-watchcat"
+#~ msgid "Host To Check"
+#~ msgstr "Host da controllare"
+
+#~ msgid "IP address or hostname to ping."
+#~ msgstr "Indirizzo IP o nome host da pingare."

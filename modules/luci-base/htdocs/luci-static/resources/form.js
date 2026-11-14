@@ -5,32 +5,35 @@
 'require dom';
 'require baseclass';
 
-var scope = this;
+const scope = this;
 
-var callSessionAccess = rpc.declare({
+uci.loadPackage('luci').catch(() => {});
+
+const callSessionAccess = rpc.declare({
 	object: 'session',
 	method: 'access',
 	params: [ 'scope', 'object', 'function' ],
 	expect: { 'access': false }
 });
 
-var CBIJSONConfig = baseclass.extend({
-	__init__: function(data) {
+const CBIJSONConfig = baseclass.extend({
+	__init__(data) {
 		data = Object.assign({}, data);
 
 		this.data = {};
 
-		var num_sections = 0,
-		    section_ids = [];
+		let num_sections = 0;
+		const section_ids = [];
 
-		for (var sectiontype in data) {
+		for (const sectiontype in data) {
 			if (!data.hasOwnProperty(sectiontype))
 				continue;
 
 			if (Array.isArray(data[sectiontype])) {
-				for (var i = 0, index = 0; i < data[sectiontype].length; i++) {
-					var item = data[sectiontype][i],
-					    anonymous, name;
+				for (let i = 0, index = 0; i < data[sectiontype].length; i++) {
+					const item = data[sectiontype][i];
+					let anonymous;
+					let name;
 
 					if (!L.isObject(item))
 						continue;
@@ -67,9 +70,9 @@ var CBIJSONConfig = baseclass.extend({
 			}
 		}
 
-		section_ids.sort(L.bind(function(a, b) {
-			var indexA = (this.data[a]['.index'] != null) ? +this.data[a]['.index'] : 9999,
-			    indexB = (this.data[b]['.index'] != null) ? +this.data[b]['.index'] : 9999;
+		section_ids.sort(L.bind((a, b) => {
+			const indexA = (this.data[a]['.index'] != null) ? +this.data[a]['.index'] : 9999;
+			const indexB = (this.data[b]['.index'] != null) ? +this.data[b]['.index'] : 9999;
 
 			if (indexA != indexB)
 				return (indexA - indexB);
@@ -77,19 +80,19 @@ var CBIJSONConfig = baseclass.extend({
 			return L.naturalCompare(a, b);
 		}, this));
 
-		for (var i = 0; i < section_ids.length; i++)
+		for (let i = 0; i < section_ids.length; i++)
 			this.data[section_ids[i]]['.index'] = i;
 	},
 
-	load: function() {
+	load() {
 		return Promise.resolve(this.data);
 	},
 
-	save: function() {
+	save() {
 		return Promise.resolve();
 	},
 
-	get: function(config, section, option) {
+	get(config, section, option) {
 		if (section == null)
 			return null;
 
@@ -99,9 +102,12 @@ var CBIJSONConfig = baseclass.extend({
 		if (!this.data.hasOwnProperty(section))
 			return null;
 
-		var value = this.data[section][option];
+		const value = this.data[section][option];
 
 		if (Array.isArray(value))
+			return value;
+
+		if (L.isObject(value))
 			return value;
 
 		if (value != null)
@@ -110,7 +116,7 @@ var CBIJSONConfig = baseclass.extend({
 		return null;
 	},
 
-	set: function(config, section, option, value) {
+	set(config, section, option, value) {
 		if (section == null || option == null || option.charAt(0) == '.')
 			return;
 
@@ -121,39 +127,48 @@ var CBIJSONConfig = baseclass.extend({
 			delete this.data[section][option];
 		else if (Array.isArray(value))
 			this.data[section][option] = value;
+		else if (L.isObject(value))
+			this.data[section][option] = value;
 		else
 			this.data[section][option] = String(value);
 	},
 
-	unset: function(config, section, option) {
+	unset(config, section, option) {
 		return this.set(config, section, option, null);
 	},
 
-	sections: function(config, sectiontype, callback) {
-		var rv = [];
+	sections(config, sectiontype, callback) {
+		const rv = [];
 
-		for (var section_id in this.data)
+		for (const section_id in this.data)
 			if (sectiontype == null || this.data[section_id]['.type'] == sectiontype)
 				rv.push(this.data[section_id]);
 
-		rv.sort(function(a, b) { return a['.index'] - b['.index'] });
+		rv.sort((a, b) => { return a['.index'] - b['.index'] });
 
 		if (typeof(callback) == 'function')
-			for (var i = 0; i < rv.length; i++)
+			for (let i = 0; i < rv.length; i++)
 				callback.call(this, rv[i], rv[i]['.name']);
 
 		return rv;
 	},
 
-	add: function(config, sectiontype, sectionname) {
-		var num_sections_type = 0, next_index = 0;
+	add(config, sectiontype, sectionname) {
+		let num_sections_type = 0;
+		let next_index = 0;
 
-		for (var name in this.data) {
+		for (const name in this.data) {
 			num_sections_type += (this.data[name]['.type'] == sectiontype);
 			next_index = Math.max(next_index, this.data[name]['.index']);
 		}
 
-		var section_id = sectionname || sectiontype + num_sections_type;
+		let section_id = sectionname;
+
+		/* Anonymous sections loaded from an array are numbered across all section
+		   types, so the per-type count may already be taken; find a free name
+		   instead of returning an existing section. */
+		if (section_id == null)
+			for (let n = num_sections_type; this.data.hasOwnProperty(section_id = sectiontype + n); n++);
 
 		if (!this.data.hasOwnProperty(section_id)) {
 			this.data[section_id] = {
@@ -167,16 +182,16 @@ var CBIJSONConfig = baseclass.extend({
 		return section_id;
 	},
 
-	remove: function(config, section) {
+	remove(config, section) {
 		if (this.data.hasOwnProperty(section))
 			delete this.data[section];
 	},
 
-	resolveSID: function(config, section_id) {
+	resolveSID(config, section_id) {
 		return section_id;
 	},
 
-	move: function(config, section_id1, section_id2, after) {
+	move(config, section_id1, section_id2, after) {
 		return uci.move.apply(this, [config, section_id1, section_id2, after]);
 	}
 });
@@ -187,48 +202,48 @@ var CBIJSONConfig = baseclass.extend({
  * @hideconstructor
  * @classdesc
  *
- * The `AbstractElement` class serves as abstract base for the different form
+ * The `AbstractElement` class serves as an abstract base for the different form
  * elements implemented by `LuCI.form`. It provides the common logic for
  * loading and rendering values, for nesting elements and for defining common
  * properties.
  *
  * This class is private and not directly accessible by user code.
  */
-var CBIAbstractElement = baseclass.extend(/** @lends LuCI.form.AbstractElement.prototype */ {
-	__init__: function(title, description) {
-		this.title = title || '';
-		this.description = description || '';
+const CBIAbstractElement = baseclass.extend(/** @lends LuCI.form.AbstractElement.prototype */ {
+	__init__(title, description) {
+		this.title = title ?? '';
+		this.description = description ?? '';
 		this.children = [];
 	},
 
 	/**
 	 * Add another form element as children to this element.
 	 *
-	 * @param {AbstractElement} element
+	 * @param {AbstractElement} obj
 	 * The form element to add.
 	 */
-	append: function(obj) {
+	append(obj) {
 		this.children.push(obj);
 	},
 
 	/**
-	 * Parse this elements form input.
+	 * Parse this element's form input.
 	 *
 	 * The `parse()` function recursively walks the form element tree and
 	 * triggers input value reading and validation for each encountered element.
 	 *
-	 * Elements which are hidden due to unsatisified dependencies are skipped.
+	 * Elements which are hidden due to unsatisfied dependencies are skipped.
 	 *
 	 * @returns {Promise<void>}
 	 * Returns a promise resolving once this element's value and the values of
 	 * all child elements have been parsed. The returned promise is rejected
-	 * if any parsed values are not meeting the validation constraints of their
+	 * if any parsed values do not meet the validation constraints of their
 	 * respective elements.
 	 */
-	parse: function() {
-		var args = arguments;
-		this.children.forEach(function(child) {
-			child.parse.apply(child, args);
+	parse() {
+		const args = arguments;
+		this.children.forEach((child) => {
+			child.parse(...args);
 		});
 	},
 
@@ -243,92 +258,102 @@ var CBIAbstractElement = baseclass.extend(/** @lends LuCI.form.AbstractElement.p
 	 * May return a DOM Node or a promise resolving to a DOM node containing
 	 * the form element's markup, including the markup of any child elements.
 	 */
-	render: function() {
+	render() {
 		L.error('InternalError', 'Not implemented');
 	},
 
-	/** @private */
-	loadChildren: function(/* ... */) {
-		var tasks = [];
+	/**
+	 * @private
+	 * @param {...*} args
+	 * @returns {Promise}
+	 */
+	loadChildren(...args) /* ... */{
+		const tasks = [];
 
 		if (Array.isArray(this.children))
-			for (var i = 0; i < this.children.length; i++)
+			for (let i = 0; i < this.children.length; i++)
 				if (!this.children[i].disable)
-					tasks.push(this.children[i].load.apply(this.children[i], arguments));
-
-		return Promise.all(tasks);
-	},
-
-	/** @private */
-	renderChildren: function(tab_name /*, ... */) {
-		var tasks = [],
-		    index = 0;
-
-		if (Array.isArray(this.children))
-			for (var i = 0; i < this.children.length; i++)
-				if (tab_name === null || this.children[i].tab === tab_name)
-					if (!this.children[i].disable)
-						tasks.push(this.children[i].render.apply(
-							this.children[i], this.varargs(arguments, 1, index++)));
+					tasks.push(this.children[i].load(...args));
 
 		return Promise.all(tasks);
 	},
 
 	/**
-	 * Strip any HTML tags from the given input string.
+	 * @private
+	 * @param {string} tab_name
+	 * @param {...*} args
+	 * @returns {Promise}
+	 */
+	renderChildren(tab_name, ...args) {
+		const tasks = [];
+		let index = 0;
+
+		if (Array.isArray(this.children))
+			for (let i = 0; i < this.children.length; i++)
+				if (tab_name === null || this.children[i].tab === tab_name)
+					if (!this.children[i].disable)
+						tasks.push(this.children[i].render(index++, ...args));
+
+		return Promise.all(tasks);
+	},
+
+	/**
+	 * Strip any HTML tags from the given input string, and decode
+	 * HTML entities.
 	 *
-	 * @param {string} input
+	 * @param {string} s
 	 * The input string to clean.
 	 *
 	 * @returns {string}
-	 * The cleaned input string with HTML removes removed.
+	 * The cleaned input string with HTML tags removed, and HTML
+	 * entities decoded.
 	 */
-	stripTags: function(s) {
-		if (typeof(s) == 'string' && !s.match(/[<>]/))
+	stripTags(s) {
+		if (typeof(s) == 'string' && !s.match(/[<>&]/))
 			return s;
 
-		var x = dom.elem(s) ? s : dom.parse('<div>' + s + '</div>');
+		const x = dom.elem(s) ? s : dom.parse(`<div>${s}</div>`);
 
-		x.querySelectorAll('br').forEach(function(br) {
+		x.querySelectorAll('br').forEach((br) => {
 			x.replaceChild(document.createTextNode('\n'), br);
 		});
 
-		return (x.textContent || x.innerText || '').replace(/([ \t]*\n)+/g, '\n');
+		return (x.textContent ?? x.innerText ?? '').replace(/([ \t]*\n)+/g, '\n');
 	},
 
 	/**
-	 * Format the given named property as title string.
+	 * Format the given named property as a title string.
 	 *
 	 * This function looks up the given named property and formats its value
-	 * suitable for use as element caption or description string. It also
+	 * suitable for use as an element caption or description string. It also
 	 * strips any HTML tags from the result.
 	 *
 	 * If the property value is a string, it is passed to `String.format()`
 	 * along with any additional parameters passed to `titleFn()`.
 	 *
 	 * If the property value is a function, it is invoked with any additional
-	 * `titleFn()` parameters as arguments and the obtained return value is
+	 * `titleFn()` parameters as arguments, and the obtained return value is
 	 * converted to a string.
 	 *
 	 * In all other cases, `null` is returned.
 	 *
-	 * @param {string} property
+	 * @param {string} attr (property)
 	 * The name of the element property to use.
 	 *
-	 * @param {...*} fmt_args
+	 * @param {...string} args (fmt_args)
 	 * Extra values to format the title string with.
 	 *
 	 * @returns {string|null}
 	 * The formatted title string or `null` if the property did not exist or
 	 * was neither a string nor a function.
 	 */
-	titleFn: function(attr /*, ... */) {
-		var s = null;
+	titleFn(attr, ...args) {
+		let s = null;
 
 		if (typeof(this[attr]) == 'function')
-			s = this[attr].apply(this, this.varargs(arguments, 1));
+			s = this[attr](...args);
 		else if (typeof(this[attr]) == 'string')
-			s = (arguments.length > 1) ? ''.format.apply(this[attr], this.varargs(arguments, 1)) : this[attr];
+			s = args.length ? this[attr].format(...args) : this[attr];
 
 		if (s != null)
 			s = this.stripTags(String(s)).trim();
@@ -341,35 +366,34 @@ var CBIAbstractElement = baseclass.extend(/** @lends LuCI.form.AbstractElement.p
 });
 
 /**
- * @constructor Map
+ * @class Map
  * @memberof LuCI.form
  * @augments LuCI.form.AbstractElement
- *
  * @classdesc
- *
  * The `Map` class represents one complete form. A form usually maps one UCI
- * configuraton file and is divided into multiple sections containing multiple
+ * configuration file and is divided into multiple sections containing multiple
  * fields each.
  *
- * It serves as main entry point into the `LuCI.form` for typical view code.
+ * It serves as the main entry point into the `LuCI.form` for typical view code.
  *
  * @param {string} config
- * The UCI configuration to map. It is automatically loaded along when the
+ * The UCI configuration to map. It is automatically loaded along with the
  * resulting map instance.
  *
  * @param {string} [title]
- * The title caption of the form. A form title is usually rendered as separate
+ * The title caption of the form. A form title is usually rendered as a separate
  * headline element before the actual form contents. If omitted, the
  * corresponding headline element will not be rendered.
  *
  * @param {string} [description]
- * The description text of the form which is usually rendered as text
- * paragraph below the form title and before the actual form conents.
+ * The description text of the form which is usually rendered as a text
+ * paragraph below the form title and before the actual form contents.
  * If omitted, the corresponding paragraph element will not be rendered.
  */
-var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
-	__init__: function(config /*, ... */) {
-		this.super('__init__', this.varargs(arguments, 1));
+const CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
+	__init__(config, ...args) {
+		this.super('__init__', args);
+		uci.load('luci');
 
 		this.config = config;
 		this.parsechain = [ config ];
@@ -386,23 +410,25 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * uci configuration upon loading and mark the form readonly if no write
 	 * permissions are granted.
 	 *
-	 * @name LuCI.form.Map.prototype#readonly
-	 * @type boolean
+	 * @memberof LuCI.form.Map.prototype
+	 * @member {boolean} readonly
 	 */
 
 	/**
-	 * Find all DOM nodes within this Map which match the given search
+	 * Return all DOM nodes within this Map which match the given search
 	 * parameters. This function is essentially a convenience wrapper around
 	 * `querySelectorAll()`.
 	 *
 	 * This function is sensitive to the amount of arguments passed to it;
 	 * if only one argument is specified, it is used as selector-expression
 	 * as-is. When two arguments are passed, the first argument is treated
-	 * as attribute name, the second one as attribute value to match.
+	 * as an attribute name, the second one as an attribute value to match.
 	 *
 	 * As an example, `map.findElements('input')` would find all `<input>`
 	 * nodes while `map.findElements('type', 'text')` would find any DOM node
 	 * with a `type="text"` attribute.
+	 *
+	 * @param {...*} args argument array
 	 *
 	 * @param {string} selector_or_attrname
 	 * If invoked with only one parameter, this argument is a
@@ -420,13 +446,13 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * @returns {NodeList}
 	 * Returns a (possibly empty) DOM `NodeList` containing the found DOM nodes.
 	 */
-	findElements: function(/* ... */) {
-		var q = null;
+	findElements(...args) /* ... */{
+		let q = null;
 
-		if (arguments.length == 1)
-			q = arguments[0];
-		else if (arguments.length == 2)
-			q = '[%s="%s"]'.format(arguments[0], arguments[1]);
+		if (args.length == 1)
+			q = args[0];
+		else if (args.length == 2)
+			q = '[%s="%s"]'.format(args[0], args[1]);
 		else
 			L.error('InternalError', 'Expecting one or two arguments to findElements()');
 
@@ -434,18 +460,20 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	},
 
 	/**
-	 * Find the first DOM node within this Map which matches the given search
+	 * Return the first DOM node within this Map which matches the given search
 	 * parameters. This function is essentially a convenience wrapper around
 	 * `findElements()` which only returns the first found node.
 	 *
 	 * This function is sensitive to the amount of arguments passed to it;
 	 * if only one argument is specified, it is used as selector-expression
 	 * as-is. When two arguments are passed, the first argument is treated
-	 * as attribute name, the second one as attribute value to match.
+	 * as an attribute name, the second one as an attribute value to match.
 	 *
 	 * As an example, `map.findElement('input')` would find the first `<input>`
 	 * node while `map.findElement('type', 'text')` would find the first DOM
 	 * node with a `type="text"` attribute.
+	 *
+	 * @param {...*} args argument array
 	 *
 	 * @param {string} selector_or_attrname
 	 * If invoked with only one parameter, this argument is a `querySelector()`
@@ -463,8 +491,8 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * @returns {Node|null}
 	 * Returns the first found DOM node or `null` if no element matched.
 	 */
-	findElement: function(/* ... */) {
-		var res = this.findElements.apply(this, arguments);
+	findElement(...args) /* ... */{
+		const res = this.findElements(...args);
 		return res.length ? res[0] : null;
 	},
 
@@ -472,16 +500,16 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * Tie another UCI configuration to the map.
 	 *
 	 * By default, a map instance will only load the UCI configuration file
-	 * specified in the constructor but sometimes access to values from
+	 * specified in the constructor, but sometimes access to values from
 	 * further configuration files is required. This function allows for such
 	 * use cases by registering further UCI configuration files which are
 	 * needed by the map.
 	 *
 	 * @param {string} config
 	 * The additional UCI configuration file to tie to the map. If the given
-	 * config already is in the list of required files, it will be ignored.
+	 * config is in the list of required files already, it will be ignored.
 	 */
-	chain: function(config) {
+	chain(config) {
 		if (this.parsechain.indexOf(config) == -1)
 			this.parsechain.push(config);
 	},
@@ -489,8 +517,8 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	/**
 	 * Add a configuration section to the map.
 	 *
-	 * LuCI forms follow the structure of the underlying UCI configurations,
-	 * means that a map, which represents a single UCI configuration, is
+	 * LuCI forms follow the structure of the underlying UCI configurations.
+	 * This means that a map, which represents a single UCI configuration, is
 	 * divided into multiple sections which in turn contain an arbitrary
 	 * number of options.
 	 *
@@ -499,25 +527,25 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * to present configuration sections in different ways. Refer to the
 	 * documentation of the different section classes for details.
 	 *
-	 * @param {LuCI.form.AbstractSection} sectionclass
+	 * @param {LuCI.form.AbstractSection} cbiClass (sectionclass)
 	 * The section class to use for rendering the configuration section.
 	 * Note that this value must be the class itself, not a class instance
-	 * obtained from calling `new`. It must also be a class dervied from
-	 * `LuCI.form.AbstractSection`.
+	 * obtained from calling `new`. It must also be a class derived from
+	 * {@link LuCI.form.AbstractSection AbstractSection}.
 	 *
-	 * @param {...string} classargs
-	 * Additional arguments which are passed as-is to the contructor of the
+	 * @param {...string} args (classargs)
+	 * Additional arguments which are passed as-is to the constructor of the
 	 * given section class. Refer to the class specific constructor
 	 * documentation for details.
 	 *
 	 * @returns {LuCI.form.AbstractSection}
 	 * Returns the instantiated section class instance.
 	 */
-	section: function(cbiClass /*, ... */) {
+	section(cbiClass, ...args) {
 		if (!CBIAbstractSection.isSubclass(cbiClass))
-			L.error('TypeError', 'Class must be a descendent of CBIAbstractSection');
+			L.error('TypeError', 'Class must be a descendant of CBIAbstractSection');
 
-		var obj = cbiClass.instantiate(this.varargs(arguments, 1, this));
+		const obj = cbiClass.instantiate([this, ...args]);
 		this.append(obj);
 		return obj;
 	},
@@ -532,19 +560,19 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * @returns {Promise<void>}
 	 * Returns a promise resolving once the entire form completed loading all
 	 * data. The promise may reject with an error if any configuration failed
-	 * to load or if any of the child elements load functions rejected with
+	 * to load or if any of the child elements' load functions reject with
 	 * an error.
 	 */
-	load: function() {
-		var doCheckACL = (!(this instanceof CBIJSONMap) && this.readonly == null),
-		    loadTasks = [ doCheckACL ? callSessionAccess('uci', this.config, 'write') : true ],
-		    configs = this.parsechain || [ this.config ];
+	load() {
+		const doCheckACL = (!(this instanceof CBIJSONMap) && this.readonly == null);
+		const loadTasks = [ doCheckACL ? callSessionAccess('uci', this.config, 'write') : true ];
+		const configs = this.parsechain ?? [ this.config ];
 
-		loadTasks.push.apply(loadTasks, configs.map(L.bind(function(config, i) {
+		loadTasks.push(...configs.map(L.bind((config, i) => {
 			return i ? L.resolveDefault(this.data.load(config)) : this.data.load(config);
 		}, this)));
 
-		return Promise.all(loadTasks).then(L.bind(function(res) {
+		return Promise.all(loadTasks).then(L.bind((res) =>  {
 			if (res[0] === false)
 				this.readonly = true;
 
@@ -558,18 +586,18 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * The `parse()` function recursively walks the form element tree and
 	 * triggers input value reading and validation for each child element.
 	 *
-	 * Elements which are hidden due to unsatisified dependencies are skipped.
+	 * Elements which are hidden due to unsatisfied dependencies are skipped.
 	 *
 	 * @returns {Promise<void>}
 	 * Returns a promise resolving once the entire form completed parsing all
-	 * input values. The returned promise is rejected if any parsed values are
-	 * not meeting the validation constraints of their respective elements.
+	 * input values. The returned promise is rejected if any parsed values do
+	 * not meet the validation constraints of their respective elements.
 	 */
-	parse: function() {
-		var tasks = [];
+	parse() {
+		const tasks = [];
 
 		if (Array.isArray(this.children))
-			for (var i = 0; i < this.children.length; i++)
+			for (let i = 0; i < this.children.length; i++)
 				tasks.push(this.children[i].parse());
 
 		return Promise.all(tasks);
@@ -581,28 +609,28 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * This function parses the current form, saves the resulting UCI changes,
 	 * reloads the UCI configuration data and redraws the form elements.
 	 *
-	 * @param {function} [cb]
+	 * @param {function()} [cb]
 	 * An optional callback function that is invoked after the form is parsed
 	 * but before the changed UCI data is saved. This is useful to perform
 	 * additional data manipulation steps before saving the changes.
 	 *
 	 * @param {boolean} [silent=false]
 	 * If set to `true`, trigger an alert message to the user in case saving
-	 * the form data failes. Otherwise fail silently.
+	 * the form data fails. Otherwise fail silently.
 	 *
 	 * @returns {Promise<void>}
 	 * Returns a promise resolving once the entire save operation is complete.
 	 * The returned promise is rejected if any step of the save operation
 	 * failed.
 	 */
-	save: function(cb, silent) {
+	save(cb, silent) {
 		this.checkDepends();
 
 		return this.parse()
 			.then(cb)
 			.then(this.data.save.bind(this.data))
 			.then(this.load.bind(this))
-			.catch(function(e) {
+			.catch((e) =>  {
 				if (!silent) {
 					ui.showModal(_('Save error'), [
 						E('p', {}, [ _('An error occurred while saving the form:') ]),
@@ -622,10 +650,10 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * unsaved user inputs to their initial form state.
 	 *
 	 * @returns {Promise<Node>}
-	 * Returns a promise resolving to the toplevel form DOM node once the
+	 * Returns a promise resolving to the top-level form DOM node once the
 	 * re-rendering is complete.
 	 */
-	reset: function() {
+	reset() {
 		return this.renderContents();
 	},
 
@@ -633,16 +661,19 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	 * Render the form markup.
 	 *
 	 * @returns {Promise<Node>}
-	 * Returns a promise resolving to the toplevel form DOM node once the
+	 * Returns a promise resolving to the top-level form DOM node once the
 	 * rendering is complete.
 	 */
-	render: function() {
+	render() {
 		return this.load().then(this.renderContents.bind(this));
 	},
 
-	/** @private */
-	renderContents: function() {
-		var mapEl = this.root || (this.root = E('div', {
+	/**
+	 * @private
+	 * @returns {Promise}
+	 */
+	renderContents() {
+		const mapEl = (this.root ??= E('div', {
 			'id': 'cbi-%s'.format(this.config),
 			'class': 'cbi-map',
 			'cbi-dependency-check': L.bind(this.checkDepends, this)
@@ -650,8 +681,8 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 
 		dom.bindClassInstance(mapEl, this);
 
-		return this.renderChildren(null).then(L.bind(function(nodes) {
-			var initialRender = !mapEl.firstChild;
+		return this.renderChildren(null).then(L.bind((nodes) =>  {
+			const initialRender = !mapEl.firstChild;
 
 			dom.content(mapEl, null);
 
@@ -669,16 +700,16 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 			if (!initialRender) {
 				mapEl.classList.remove('flash');
 
-				window.setTimeout(function() {
+				window.setTimeout(() =>  {
 					mapEl.classList.add('flash');
 				}, 1);
 			}
 
 			this.checkDepends();
 
-			var tabGroups = mapEl.querySelectorAll('.cbi-map-tabbed, .cbi-section-node-tabbed');
+			const tabGroups = mapEl.querySelectorAll('.cbi-map-tabbed, .cbi-section-node-tabbed');
 
-			for (var i = 0; i < tabGroups.length; i++)
+			for (let i = 0; i < tabGroups.length; i++)
 				ui.tabs.initTabGroup(tabGroups[i].childNodes);
 
 			return mapEl;
@@ -688,29 +719,32 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 	/**
 	 * Find a form option element instance.
 	 *
-	 * @param {string} name_or_id
+	 * @param {string} name
 	 * The name or the full ID of the option element to look up.
 	 *
 	 * @param {string} [section_id]
-	 * The ID of the UCI section containing the option to look up. May be
-	 * omitted if a full ID is passed as first argument.
+	 * The ID of the UCI section that contains the option to look up. May be
+	 * omitted if a full ID is passed as the first argument.
 	 *
-	 * @param {string} [config]
-	 * The name of the UCI configuration the option instance is belonging to.
+	 * @param {string} [config_name]
+	 * The name of the UCI configuration the option instance belongs to.
 	 * Defaults to the main UCI configuration of the map if omitted.
 	 *
 	 * @returns {Array<LuCI.form.AbstractValue,string>|null}
 	 * Returns a two-element array containing the form option instance as
-	 * first item and the corresponding UCI section ID as second item.
+	 * the first item and the corresponding UCI section ID as the second item.
 	 * Returns `null` if the option could not be found.
 	 */
-	lookupOption: function(name, section_id, config_name) {
-		var id, elem, sid, inst;
+	lookupOption(name, section_id, config_name) {
+		let id;
+		let elem;
+		let sid;
+		let inst;
 
 		if (name.indexOf('.') > -1)
 			id = 'cbid.%s'.format(name);
 		else
-			id = 'cbid.%s.%s.%s'.format(config_name || this.config, section_id, name);
+			id = 'cbid.%s.%s.%s'.format(config_name ?? this.config, section_id, name);
 
 		elem = this.findElement('data-field', id);
 		sid  = elem ? id.split(/\./)[2] : null;
@@ -719,33 +753,43 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 		return (inst instanceof CBIAbstractValue) ? [ inst, sid ] : null;
 	},
 
-	/** @private */
-	checkDepends: function(ev, n) {
-		var changed = false;
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @param {number} n
+	 */
+	checkDepends(ev, n) {
+		let changed = false;
 
-		for (var i = 0, s = this.children[0]; (s = this.children[i]) != null; i++)
+		for (let i = 0, s = this.children[0]; (s = this.children[i]) != null; i++)
 			if (s.checkDepends(ev, n))
 				changed = true;
 
-		if (changed && (n || 0) < 10)
-			this.checkDepends(ev, (n || 10) + 1);
+		if (changed && (n ?? 0) < 10)
+			this.checkDepends(ev, (n ?? 10) + 1);
 
 		ui.tabs.updateTabs(ev, this.root);
 	},
 
-	/** @private */
-	isDependencySatisfied: function(depends, config_name, section_id) {
-		var def = false;
+	/**
+	 * @private
+	 * @param {string[]} depends
+	 * @param {string} config_name
+	 * @param {string} section_id
+	 * @returns {boolean}
+	 */
+	isDependencySatisfied(depends, config_name, section_id) {
+		let def = false;
 
 		if (!Array.isArray(depends) || !depends.length)
 			return true;
 
-		for (var i = 0; i < depends.length; i++) {
-			var istat = true,
-			    reverse = depends[i]['!reverse'],
-			    contains = depends[i]['!contains'];
+		for (let i = 0; i < depends.length; i++) {
+			let istat = true;
+			const reverse = depends[i]['!reverse'];
+			const contains = depends[i]['!contains'];
 
-			for (var dep in depends[i]) {
+			for (const dep in depends[i]) {
 				if (dep == '!reverse' || dep == '!contains') {
 					continue;
 				}
@@ -754,10 +798,10 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 					istat = false;
 				}
 				else {
-					var res = this.lookupOption(dep, section_id, config_name),
-					    val = (res && res[0].isActive(res[1])) ? res[0].formvalue(res[1]) : null;
+					const res = this.lookupOption(dep, section_id, config_name);
+					const val = (res && res[0].isActive(res[1])) ? res[0].formvalue(res[1]) : null;
 
-					var equal = contains
+					const equal = contains
 						? isContained(val, depends[i][dep])
 						: isEqual(val, depends[i][dep]);
 
@@ -774,7 +818,7 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
 });
 
 /**
- * @constructor JSONMap
+ * @class JSONMap
  * @memberof LuCI.form
  * @augments LuCI.form.Map
  *
@@ -782,27 +826,27 @@ var CBIMap = CBIAbstractElement.extend(/** @lends LuCI.form.Map.prototype */ {
  *
  * A `JSONMap` class functions similar to [LuCI.form.Map]{@link LuCI.form.Map}
  * but uses a multidimensional JavaScript object instead of UCI configuration
- * as data source.
+ * as a data source.
  *
  * @param {Object<string, Object<string, *>|Array<Object<string, *>>>} data
- * The JavaScript object to use as data source. Internally, the object is
- * converted into an UCI-like format. Its toplevel keys are treated like UCI
+ * The JavaScript object to use as a data source. Internally, the object is
+ * converted into an UCI-like format. Its top-level keys are treated like UCI
  * section types while the object or array-of-object values are treated as
  * section contents.
  *
  * @param {string} [title]
- * The title caption of the form. A form title is usually rendered as separate
+ * The title caption of the form. A form title is usually rendered as a separate
  * headline element before the actual form contents. If omitted, the
  * corresponding headline element will not be rendered.
  *
  * @param {string} [description]
- * The description text of the form which is usually rendered as text
- * paragraph below the form title and before the actual form conents.
+ * The description text of the form which is usually rendered as a text
+ * paragraph below the form title and before the actual form contents.
  * If omitted, the corresponding paragraph element will not be rendered.
  */
-var CBIJSONMap = CBIMap.extend(/** @lends LuCI.form.JSONMap.prototype */ {
-	__init__: function(data /*, ... */) {
-		this.super('__init__', this.varargs(arguments, 1, 'json'));
+const CBIJSONMap = CBIMap.extend(/** @lends LuCI.form.JSONMap.prototype */ {
+	__init__(data, ...args) {
+		this.super('__init__', [ 'json', ...args ]);
 
 		this.config = 'json';
 		this.parsechain = [ 'json' ];
@@ -817,16 +861,16 @@ var CBIJSONMap = CBIMap.extend(/** @lends LuCI.form.JSONMap.prototype */ {
  * @hideconstructor
  * @classdesc
  *
- * The `AbstractSection` class serves as abstract base for the different form
- * section styles implemented by `LuCI.form`. It provides the common logic for
+ * The `AbstractSection` class serves as an abstract base for the different form
+ * section styles implemented by {@link LuCI.form}. It provides the common logic for
  * enumerating underlying configuration section instances, for registering
- * form options and for handling tabs to segment child options.
+ * form options and for handling tabs in order to segment child options.
  *
  * This class is private and not directly accessible by user code.
  */
-var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractSection.prototype */ {
-	__init__: function(map, sectionType /*, ... */) {
-		this.super('__init__', this.varargs(arguments, 2));
+const CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractSection.prototype */ {
+	__init__(map, sectionType, ...args) {
+		this.super('__init__', args);
 
 		this.sectiontype = sectionType;
 		this.map = map;
@@ -845,8 +889,9 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 *
 	 * If this section is not nested, the property is `null`.
 	 *
-	 * @name LuCI.form.AbstractSection.prototype#parentoption
-	 * @type LuCI.form.AbstractValue
+	 * @memberof LuCI.form.AbstractSection.prototype
+	 * @member parentoption
+	 * @type {LuCI.form.AbstractValue}
 	 * @readonly
 	 */
 
@@ -861,7 +906,7 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * Returns an array of UCI section IDs covered by this form element.
 	 * The sections will be rendered in the same order as the returned array.
 	 */
-	cfgsections: function() {
+	cfgsections() {
 		L.error('InternalError', 'Not implemented');
 	},
 
@@ -873,8 +918,8 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * the form section element.
 	 *
 	 * The default implementation always returns `true`. User code or
-	 * classes extending `AbstractSection` may overwrite this function with
-	 * custom implementations.
+	 * classes extending {@link LuCI.form.AbstractSection AbstractSection} may
+	 * override this function with custom implementations.
 	 *
 	 * @abstract
 	 * @param {string} section_id
@@ -884,7 +929,7 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * Returns `true` when the given UCI section ID should be handled and
 	 * `false` when it should be ignored.
 	 */
-	filter: function(section_id) {
+	filter(section_id) {
 		return true;
 	},
 
@@ -897,17 +942,17 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * @returns {Promise<void>}
 	 * Returns a promise resolving once the values of all child elements have
 	 * been loaded. The promise may reject with an error if any of the child
-	 * elements load functions rejected with an error.
+	 * elements' load functions rejected with an error.
 	 */
-	load: function() {
-		var section_ids = this.cfgsections(),
-		    tasks = [];
+	load() {
+		const section_ids = this.cfgsections();
+		const tasks = [];
 
 		if (Array.isArray(this.children))
-			for (var i = 0; i < section_ids.length; i++)
+			for (let i = 0; i < section_ids.length; i++)
 				tasks.push(this.loadChildren(section_ids[i])
-					.then(Function.prototype.bind.call(function(section_id, set_values) {
-						for (var i = 0; i < set_values.length; i++)
+					.then(Function.prototype.bind.call((section_id, set_values) =>  {
+						for (let i = 0; i < set_values.length; i++)
 							this.children[i].cfgvalue(section_id, set_values[i]);
 					}, this, section_ids[i])));
 
@@ -921,20 +966,20 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * triggers input value reading and validation for each encountered child
 	 * option element.
 	 *
-	 * Options which are hidden due to unsatisified dependencies are skipped.
+	 * Options which are hidden due to unsatisfied dependencies are skipped.
 	 *
 	 * @returns {Promise<void>}
 	 * Returns a promise resolving once the values of all child elements have
-	 * been parsed. The returned promise is rejected if any parsed values are
-	 * not meeting the validation constraints of their respective elements.
+	 * been parsed. The returned promise is rejected if any parsed values do
+	 * not meet the validation constraints of their respective elements.
 	 */
-	parse: function() {
-		var section_ids = this.cfgsections(),
-		    tasks = [];
+	parse() {
+		const section_ids = this.cfgsections();
+		const tasks = [];
 
 		if (Array.isArray(this.children))
-			for (var i = 0; i < section_ids.length; i++)
-				for (var j = 0; j < this.children.length; j++)
+			for (let i = 0; i < section_ids.length; i++)
+				for (let j = 0; j < this.children.length; j++)
 					tasks.push(this.children[j].parse(section_ids[i]));
 
 		return Promise.all(tasks);
@@ -963,28 +1008,28 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 *
 	 * @param {string} [description]
 	 * An additional description text for the corresponding tab pane. It is
-	 * displayed as text paragraph below the tab but before the tab pane
+	 * displayed as a text paragraph below the tab but before the tab pane
 	 * contents. If omitted, no description will be rendered.
 	 *
 	 * @throws {Error}
-	 * Throws an exeption if a tab with the same `name` already exists.
+	 * Throws an exception if a tab with the same `name` already exists.
 	 */
-	tab: function(name, title, description) {
+	tab(name, title, description) {
 		if (this.tabs && this.tabs[name])
 			throw 'Tab already declared';
 
-		var entry = {
-			name: name,
-			title: title,
-			description: description,
+		const entry = {
+			name,
+			title,
+			description,
 			children: []
 		};
 
-		this.tabs = this.tabs || [];
+		this.tabs ??= [];
 		this.tabs.push(entry);
 		this.tabs[name] = entry;
 
-		this.tab_names = this.tab_names || [];
+		this.tab_names ??= [];
 		this.tab_names.push(name);
 	},
 
@@ -994,29 +1039,29 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * Note that [taboption()]{@link LuCI.form.AbstractSection#taboption}
 	 * should be used instead if this form section element uses tabs.
 	 *
-	 * @param {LuCI.form.AbstractValue} optionclass
+	 * @param {LuCI.form.AbstractValue} cbiClass
 	 * The option class to use for rendering the configuration option. Note
 	 * that this value must be the class itself, not a class instance obtained
-	 * from calling `new`. It must also be a class dervied from
-	 * [LuCI.form.AbstractSection]{@link LuCI.form.AbstractSection}.
+	 * from calling `new`. It must also be a class derived from
+	 * {@link LuCI.form.AbstractValue AbstractValue}.
 	 *
-	 * @param {...*} classargs
-	 * Additional arguments which are passed as-is to the contructor of the
+	 * @param {...*} args (classargs)
+	 * Additional arguments which are passed as-is to the constructor of the
 	 * given option class. Refer to the class specific constructor
 	 * documentation for details.
 	 *
 	 * @throws {TypeError}
 	 * Throws a `TypeError` exception in case the passed class value is not a
-	 * descendent of `AbstractValue`.
+	 * descendant of {@link LuCI.form.AbstractValue AbstractValue}.
 	 *
 	 * @returns {LuCI.form.AbstractValue}
 	 * Returns the instantiated option class instance.
 	 */
-	option: function(cbiClass /*, ... */) {
+	option(cbiClass, ...args) {
 		if (!CBIAbstractValue.isSubclass(cbiClass))
-			throw L.error('TypeError', 'Class must be a descendent of CBIAbstractValue');
+			throw L.error('TypeError', 'Class must be a descendant of CBIAbstractValue');
 
-		var obj = cbiClass.instantiate(this.varargs(arguments, 1, this.map, this));
+		const obj = cbiClass.instantiate([ this.map, this, ...args ]);
 		this.append(obj);
 		return obj;
 	},
@@ -1024,17 +1069,17 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	/**
 	 * Add a configuration option widget to a tab of the section.
 	 *
-	 * @param {string} tabname
+	 * @param {string} tabName
 	 * The name of the section tab to add the option element to.
 	 *
-	 * @param {LuCI.form.AbstractValue} optionclass
+	 * @param {LuCI.form.AbstractValue} cbiClass
 	 * The option class to use for rendering the configuration option. Note
 	 * that this value must be the class itself, not a class instance obtained
-	 * from calling `new`. It must also be a class dervied from
-	 * [LuCI.form.AbstractSection]{@link LuCI.form.AbstractSection}.
+	 * from calling `new`. It must also be a class derived from
+	 * {@link LuCI.form.AbstractValue AbstractValue}.
 	 *
-	 * @param {...*} classargs
-	 * Additional arguments which are passed as-is to the contructor of the
+	 * @param {...*} args (classargs)
+	 * Additional arguments which are passed as-is to the constructor of the
 	 * given option class. Refer to the class specific constructor
 	 * documentation for details.
 	 *
@@ -1044,18 +1089,19 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 *
 	 * @throws {TypeError}
 	 * Throws a `TypeError` exception in case the passed class value is not a
-	 * descendent of `AbstractValue`.
+	 * descendant of {@link LuCI.form.AbstractValue AbstractValue}.
 	 *
 	 * @returns {LuCI.form.AbstractValue}
 	 * Returns the instantiated option class instance.
 	 */
-	taboption: function(tabName /*, ... */) {
-		if (!this.tabs || !this.tabs[tabName])
+	taboption(tabName, cbiClass, ...args) {
+		if (!this.tabs?.[tabName])
 			throw L.error('ReferenceError', 'Associated tab not declared');
 
-		var obj = this.option.apply(this, this.varargs(arguments, 1));
+		const obj = this.option(cbiClass, ...args);
 		obj.tab = tabName;
 		this.tabs[tabName].children.push(obj);
+
 		return obj;
 	},
 
@@ -1064,7 +1110,7 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 *
 	 * This function is sensitive to the amount of arguments passed to it;
 	 * if only one argument is specified, the configuration values of all
-	 * options within this section are returned as dictionary.
+	 * options within this section are returned as a dictionary.
 	 *
 	 * If both the section ID and an option name are supplied, this function
 	 * returns the configuration value of the specified option only.
@@ -1080,10 +1126,10 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * configuration values or just a single configuration value, depending
 	 * on the amount of passed arguments.
 	 */
-	cfgvalue: function(section_id, option) {
-		var rv = (arguments.length == 1) ? {} : null;
+	cfgvalue(section_id, option) {
+		const rv = (arguments.length == 1) ? {} : null;
 
-		for (var i = 0, o; (o = this.children[i]) != null; i++)
+		for (let i = 0, o; (o = this.children[i]) != null; i++)
 			if (rv)
 				rv[o.option] = o.cfgvalue(section_id);
 			else if (o.option == option)
@@ -1093,11 +1139,11 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	},
 
 	/**
-	 * Query underlying option widget input values.
+	 * Query the underlying option widget input values.
 	 *
 	 * This function is sensitive to the amount of arguments passed to it;
 	 * if only one argument is specified, the widget input values of all
-	 * options within this section are returned as dictionary.
+	 * options within this section are returned as a dictionary.
 	 *
 	 * If both the section ID and an option name are supplied, this function
 	 * returns the widget input value of the specified option only.
@@ -1113,11 +1159,11 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * widget input values or just a single widget input value, depending
 	 * on the amount of passed arguments.
 	 */
-	formvalue: function(section_id, option) {
-		var rv = (arguments.length == 1) ? {} : null;
+	formvalue(section_id, option) {
+		const rv = (arguments.length == 1) ? {} : null;
 
-		for (var i = 0, o; (o = this.children[i]) != null; i++) {
-			var func = this.map.root ? this.children[i].formvalue : this.children[i].cfgvalue;
+		for (let i = 0, o; (o = this.children[i]) != null; i++) {
+			const func = this.map.root ? this.children[i].formvalue : this.children[i].cfgvalue;
 
 			if (rv)
 				rv[o.option] = func.call(o, section_id);
@@ -1133,7 +1179,7 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 *
 	 * This function is sensitive to the amount of arguments passed to it;
 	 * if only one argument is specified, the LuCI.ui widget instances of all
-	 * options within this section are returned as dictionary.
+	 * options within this section are returned as a dictionary.
 	 *
 	 * If both the section ID and an option name are supplied, this function
 	 * returns the LuCI.ui widget instance value of the specified option only.
@@ -1149,10 +1195,10 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * widget input values or just a single widget input value, depending
 	 * on the amount of passed arguments.
 	 */
-	getUIElement: function(section_id, option) {
-		var rv = (arguments.length == 1) ? {} : null;
+	getUIElement(section_id, option) {
+		const rv = (arguments.length == 1) ? {} : null;
 
-		for (var i = 0, o; (o = this.children[i]) != null; i++)
+		for (let i = 0, o; (o = this.children[i]) != null; i++)
 			if (rv)
 				rv[o.option] = o.getUIElement(section_id);
 			else if (o.option == option)
@@ -1166,7 +1212,7 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 *
 	 * This function is sensitive to the amount of arguments passed to it;
 	 * if no option name is specified, all options within this section are
-	 * returned as dictionary.
+	 * returned as a dictionary.
 	 *
 	 * If an option name is supplied, this function returns the matching
 	 * LuCI.form.AbstractValue instance only.
@@ -1179,10 +1225,10 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	 * option instance objects or just a single object instance value,
 	 * depending on the amount of passed arguments.
 	 */
-	getOption: function(option) {
-		var rv = (arguments.length == 0) ? {} : null;
+	getOption(option) {
+		const rv = (arguments.length == 0) ? {} : null;
 
-		for (var i = 0, o; (o = this.children[i]) != null; i++)
+		for (let i = 0, o; (o = this.children[i]) != null; i++)
 			if (rv)
 				rv[o.option] = o;
 			else if (o.option == option)
@@ -1191,34 +1237,43 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 		return rv;
 	},
 
-	/** @private */
-	renderUCISection: function(section_id) {
-		var renderTasks = [];
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {Promise}
+	 */
+	renderUCISection(section_id) {
+		const renderTasks = [];
 
 		if (!this.tabs)
 			return this.renderOptions(null, section_id);
 
-		for (var i = 0; i < this.tab_names.length; i++)
+		for (let i = 0; i < this.tab_names.length; i++)
 			renderTasks.push(this.renderOptions(this.tab_names[i], section_id));
 
 		return Promise.all(renderTasks)
 			.then(this.renderTabContainers.bind(this, section_id));
 	},
 
-	/** @private */
-	renderTabContainers: function(section_id, nodes) {
-		var config_name = this.uciconfig || this.map.config,
-		    containerEls = E([]);
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {Node[]} nodes
+	 * @returns {Node[]}
+	 */
+	renderTabContainers(section_id, nodes) {
+		const config_name = this.uciconfig ?? this.map.config;
+		const containerEls = E([]);
 
-		for (var i = 0; i < nodes.length; i++) {
-			var tab_name = this.tab_names[i],
-			    tab_data = this.tabs[tab_name],
-			    containerEl = E('div', {
-			    	'id': 'container.%s.%s.%s'.format(config_name, section_id, tab_name),
-			    	'data-tab': tab_name,
-			    	'data-tab-title': tab_data.title,
-			    	'data-tab-active': tab_name === this.selected_tab
-			    });
+		for (let i = 0; i < nodes.length; i++) {
+			const tab_name = this.tab_names[i];
+			const tab_data = this.tabs[tab_name];
+			const containerEl = E('div', {
+				'id': 'container.%s.%s.%s'.format(config_name, section_id, tab_name),
+				'data-tab': tab_name,
+				'data-tab-title': tab_data.title,
+				'data-tab-active': tab_name === this.selected_tab
+			});
 
 			if (tab_data.description != null && tab_data.description != '')
 				containerEl.appendChild(
@@ -1231,28 +1286,44 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 		return containerEls;
 	},
 
-	/** @private */
-	renderOptions: function(tab_name, section_id) {
-		var in_table = (this instanceof CBITableSection);
-		return this.renderChildren(tab_name, section_id, in_table).then(function(nodes) {
-			var optionEls = E([]);
-			for (var i = 0; i < nodes.length; i++)
+	/**
+	 * @private
+	 * @param {string} tab_name
+	 * @param {string} section_id
+	 * @returns {Node[]}
+	 */
+	renderOptions(tab_name, section_id) {
+		const in_table = (this instanceof CBITableSection);
+		return this.renderChildren(tab_name, section_id, in_table).then((nodes) =>  {
+			const optionEls = E([]);
+			for (let i = 0; i < nodes.length; i++)
 				optionEls.appendChild(nodes[i]);
 			return optionEls;
 		});
 	},
 
-	/** @private */
-	checkDepends: function(ev, n) {
-		var changed = false,
-		    sids = this.cfgsections();
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @param {number} n
+	 * @returns {boolean}
+	 */
+	checkDepends(ev, n) {
+		let changed = false;
+		const sids = this.cfgsections();
 
-		for (var i = 0, sid = sids[0]; (sid = sids[i]) != null; i++) {
-			for (var j = 0, o = this.children[0]; (o = this.children[j]) != null; j++) {
-				var isActive = o.isActive(sid),
-				    isSatisified = o.checkDepends(sid);
+		for (let i = 0, sid = sids[0]; (sid = sids[i]) != null; i++) {
+			/*
+			 * do not remove elements that are not rendered yet
+			 */
+			if (!this.map.findElement('data-section-id', sid))
+				continue;
 
-				if (isActive != isSatisified) {
+			for (let j = 0, o = this.children[0]; (o = this.children[j]) != null; j++) {
+				let isActive = o.isActive(sid);
+				const isSatisfied = o.checkDepends(sid);
+
+				if (isActive != isSatisfied) {
 					o.setActive(sid, !isActive);
 					isActive = !isActive;
 					changed = true;
@@ -1267,8 +1338,14 @@ var CBIAbstractSection = CBIAbstractElement.extend(/** @lends LuCI.form.Abstract
 	}
 });
 
-
-var isEqual = function(x, y) {
+/**
+ * Determines equality of two provided parameters. Can be arrays or objects.
+ * @function
+ * @param {*} x
+ * @param {*} y
+ * @returns {boolean}
+ */
+function isEqual(x, y) {
 	if (typeof(y) == 'object' && y instanceof RegExp)
 		return (x == null) ? false : y.test(x);
 
@@ -1282,12 +1359,12 @@ var isEqual = function(x, y) {
 		if (x.length != y.length)
 			return false;
 
-		for (var i = 0; i < x.length; i++)
+		for (let i = 0; i < x.length; i++)
 			if (!isEqual(x[i], y[i]))
 				return false;
 	}
 	else if (typeof(x) == 'object') {
-		for (var k in x) {
+		for (const k in x) {
 			if (x.hasOwnProperty(k) && !y.hasOwnProperty(k))
 				return false;
 
@@ -1295,7 +1372,7 @@ var isEqual = function(x, y) {
 				return false;
 		}
 
-		for (var k in y)
+		for (const k in y)
 			if (y.hasOwnProperty(k) && !x.hasOwnProperty(k))
 				return false;
 	}
@@ -1306,9 +1383,16 @@ var isEqual = function(x, y) {
 	return true;
 };
 
-var isContained = function(x, y) {
+/**
+ * Determines containment of two provided parameters. Can be arrays or objects.
+ * @function
+ * @param {*} x
+ * @param {*} y
+ * @returns {boolean}
+ */
+function isContained(x, y) {
 	if (Array.isArray(x)) {
-		for (var i = 0; i < x.length; i++)
+		for (let i = 0; i < x.length; i++)
 			if (x[i] == y)
 				return true;
 	}
@@ -1330,16 +1414,16 @@ var isContained = function(x, y) {
  * @hideconstructor
  * @classdesc
  *
- * The `AbstractValue` class serves as abstract base for the different form
+ * The `AbstractValue` class serves as an abstract base for the different form
  * option styles implemented by `LuCI.form`. It provides the common logic for
  * handling option input values, for dependencies among options and for
  * validation constraints that should be applied to entered values.
  *
  * This class is private and not directly accessible by user code.
  */
-var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractValue.prototype */ {
-	__init__: function(map, section, option /*, ... */) {
-		this.super('__init__', this.varargs(arguments, 3));
+const CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractValue.prototype */ {
+	__init__(map, section, option, ...args) {
+		this.super('__init__', args);
 
 		this.section = section;
 		this.option = option;
@@ -1360,8 +1444,8 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * the form when the option element is disabled due to unsatisfied
 	 * dependency constraints.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#rmempty
-	 * @type boolean
+	 * @member {boolean} rmempty
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default true
 	 */
 
@@ -1370,27 +1454,27 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * otherwise the option element is marked invalid when no value is entered
 	 * or selected by the user.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#optional
-	 * @type boolean
+	 * @member {boolean} optional
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default false
 	 */
 
 	/**
 	 * If set to `true`, the underlying ui input widget value is not cleared
-	 * from the configuration on unsatisfied depedencies. The default behavior
+	 * from the configuration on unsatisfied dependencies. The default behavior
 	 * is to remove the values of all options whose dependencies are not
 	 * fulfilled.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#retain
-	 * @type boolean
+	 * @member {boolean} retain
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default false
 	 */
 
 	/**
 	 * Sets a default value to use when the underlying UCI option is not set.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#default
-	 * @type *
+	 * @member {*} default
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
@@ -1401,8 +1485,8 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * If the user entered input does not match the datatype validation, the
 	 * option element is marked as invalid.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#datatype
-	 * @type string
+	 * @member {string} datatype
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
@@ -1410,13 +1494,13 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * Specifies a custom validation function to test the user input for
 	 * validity. The validation function must return `true` to accept the
 	 * value. Any other return value type is converted to a string and
-	 * displayed to the user as validation error message.
+	 * displayed to the user as a validation error message.
 	 *
 	 * If the user entered input does not pass the validation function, the
 	 * option element is marked as invalid.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#validate
-	 * @type function
+	 * @member {function()} validate
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
@@ -1426,10 +1510,10 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * By default, the configuration name is inherited from the parent Map.
 	 * By setting this property, a deviating configuration may be specified.
 	 *
-	 * The default is null, means inheriting from the parent form.
+	 * The default of null means inherit from the parent form.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#uciconfig
-	 * @type string
+	 * @member {string} uciconfig
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
@@ -1439,46 +1523,46 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * By default, the section ID is inherited from the parent section element.
 	 * By setting this property, a deviating section may be specified.
 	 *
-	 * The default is null, means inheriting from the parent section.
+	 * The default of null means inherit from the parent section.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#ucisection
-	 * @type string
+	 * @member {string} ucisection
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
 	/**
 	 * Override the UCI option name to read the value from.
 	 *
-	 * By default, the elements name, which is passed as third argument to
-	 * the constructor, is used as UCI option name. By setting this property,
+	 * By default, the elements name, which is passed as the third argument to
+	 * the constructor, is used as the UCI option name. By setting this property,
 	 * a deviating UCI option may be specified.
 	 *
-	 * The default is null, means using the option element name.
+	 * The default of null means use the option element name.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#ucioption
-	 * @type string
+	 * @member {string} ucioption
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
 	/**
-	 * Mark grid section option element as editable.
+	 * Mark the grid section option element as editable.
 	 *
-	 * Options which are displayed in the table portion of a `GridSection`
+	 * Options which are displayed in the table portion of a {@link LuCI.form.GridSection GridSection}
 	 * instance are rendered as readonly text by default. By setting the
 	 * `editable` property of a child option element to `true`, that element
-	 * is rendered as full input widget within its cell instead of a text only
+	 * is rendered as a full input widget within its cell instead of a text only
 	 * preview.
 	 *
 	 * This property has no effect on options that are not children of grid
 	 * section elements.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#editable
-	 * @type boolean
+	 * @member {boolean} editable
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default false
 	 */
 
 	/**
-	 * Move grid section option element into the table, the modal popup or both.
+	 * Move the grid section option element into the table, the modal popup or both.
 	 *
 	 * If this property is `null` (the default), the option element is
 	 * displayed in both the table preview area and the per-section instance
@@ -1489,8 +1573,8 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * This property has no effect on options that are not children of grid
 	 * section elements.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#modalonly
-	 * @type boolean
+	 * @member {boolean} modalonly
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
@@ -1499,11 +1583,11 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * This property defaults to the readonly state of the parent form element.
 	 * When set to `true`, the underlying widget is rendered in disabled state,
-	 * means its contents cannot be changed and the widget cannot be interacted
-	 * with.
+	 * meaning its contents cannot be changed and the widget cannot be
+	 * interacted with.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#readonly
-	 * @type boolean
+	 * @member {boolean} readonly
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default false
 	 */
 
@@ -1518,44 +1602,44 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * This property has no effect on options that are not children of grid or
 	 * table section elements.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#width
-	 * @type number|string
+	 * @member {number|string} width
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
 	/**
 	 * Register a custom value change handler.
 	 *
-	 * If this property is set to a function value, the function is invoked
-	 * whenever the value of the underlying UI input element is changing.
+	 * If this property is set to a function, it is invoked
+	 * whenever the value of the underlying UI input element changes.
 	 *
 	 * The invoked handler function will receive the DOM click element as
 	 * first and the underlying configuration section ID as well as the input
 	 * value as second and third argument respectively.
 	 *
-	 * @name LuCI.form.AbstractValue.prototype#onchange
-	 * @type function
+	 * @member {function()} onchange
+	 * @memberof LuCI.form.AbstractValue.prototype
 	 * @default null
 	 */
 
 	/**
-	 * Add a dependency contraint to the option.
+	 * Add a dependency constraint to the option.
 	 *
 	 * Dependency constraints allow making the presence of option elements
-	 * dependant on the current values of certain other options within the
+	 * dependent on the current values of certain other options within the
 	 * same form. An option element with unsatisfied dependencies will be
-	 * hidden from the view and its current value is omitted when saving.
+	 * hidden from the view and its current value omitted when saving.
 	 *
 	 * Multiple constraints (that is, multiple calls to `depends()`) are
 	 * treated as alternatives, forming a logical "or" expression.
 	 *
-	 * By passing an object of name => value pairs as first argument, it is
-	 * possible to depend on multiple options simultaneously, allowing to form
+	 * By passing an object of name => value pairs as the first argument, it is
+	 * possible to depend on multiple options simultaneously, forming
 	 * a logical "and" expression.
 	 *
-	 * Option names may be given in "dot notation" which allows to reference
-	 * option elements outside of the current form section. If a name without
-	 * dot is specified, it refers to an option within the same configuration
+	 * Option names may be given in "dot notation" which allows referencing
+	 * option elements outside the current form section. If a name without
+	 * a dot is specified, it refers to an option within the same configuration
 	 * section. If specified as <code>configname.sectionid.optionname</code>,
 	 * options anywhere within the same form may be specified.
 	 *
@@ -1566,20 +1650,20 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * <ul>
 	 *   <li>
-	 *    <code>!reverse</code><br>
-	 *    Invert the dependency, instead of requiring another option to be
-	 *    equal to the dependency value, that option should <em>not</em> be
-	 *    equal.
+	 *	<code>!reverse</code><br>
+	 *	Invert the dependency, instead of requiring another option to be
+	 *	equal to the dependency value, that option should <em>not</em> be
+	 *	equal.
 	 *   </li>
 	 *   <li>
-	 *    <code>!contains</code><br>
-	 *    Instead of requiring an exact match, the dependency is considered
-	 *    satisfied when the dependency value is contained within the option
-	 *    value.
+	 *	<code>!contains</code><br>
+	 *	Instead of requiring an exact match, the dependency is considered
+	 *	satisfied when the dependency value is contained within the option
+	 *	value.
 	 *   </li>
 	 *   <li>
-	 *    <code>!default</code><br>
-	 *    The dependency is always satisfied
+	 *	<code>!default</code><br>
+	 *	The dependency is always satisfied
 	 *   </li>
 	 * </ul>
 	 *
@@ -1605,7 +1689,7 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *  </li>
 	 *  <li>
 	 *   <code>opt.depends({ foo: "test" })<br>
-	 *         opt.depends({ bar: "qrx" })</code><br>
+	 *		 opt.depends({ bar: "qrx" })</code><br>
 	 *   Require either <code>foo</code> to be set to <code>test</code>,
 	 *   <em>or</em> the <code>bar</code> option to be <code>qrx</code>.
 	 *  </li>
@@ -1620,17 +1704,17 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *  </li>
 	 * </ul>
 	 *
-	 * @param {string|Object<string, string|RegExp>} optionname_or_depends
+	 * @param {string|Object<string, string|RegExp>} field
 	 * The name of the option to depend on or an object describing multiple
-	 * dependencies which must be satified (a logical "and" expression).
+	 * dependencies which must be satisfied (a logical "and" expression).
 	 *
-	 * @param {string} optionvalue|RegExp
-	 * When invoked with a plain option name as first argument, this parameter
-	 * specifies the expected value. In case an object is passed as first
+	 * @param {string|RegExp} [value]
+	 * When invoked with a plain option name as the first argument, this parameter
+	 * specifies the expected value. In case an object is passed as the first
 	 * argument, this parameter is ignored.
 	 */
-	depends: function(field, value) {
-		var deps;
+	depends(field, value) {
+		let deps;
 
 		if (typeof(field) === 'string')
 			deps = {}, deps[field] = value;
@@ -1640,16 +1724,21 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 		this.deps.push(deps);
 	},
 
-	/** @private */
-	transformDepList: function(section_id, deplist) {
-		var list = deplist || this.deps,
-		    deps = [];
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {string[]} deplist
+	 * @returns {string[]}
+	 */
+	transformDepList(section_id, deplist) {
+		const list = deplist ?? this.deps;
+		const deps = [];
 
 		if (Array.isArray(list)) {
-			for (var i = 0; i < list.length; i++) {
-				var dep = {};
+			for (let i = 0; i < list.length; i++) {
+				const dep = {};
 
-				for (var k in list[i]) {
+				for (const k in list[i]) {
 					if (list[i].hasOwnProperty(k)) {
 						if (k.charAt(0) === '!')
 							dep[k] = list[i][k];
@@ -1657,14 +1746,14 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 							dep['cbid.%s'.format(k)] = list[i][k];
 						else
 							dep['cbid.%s.%s.%s'.format(
-								this.uciconfig || this.section.uciconfig || this.map.config,
-								this.ucisection || section_id,
+								this.uciconfig ?? this.section.uciconfig ?? this.map.config,
+								this.ucisection ?? section_id,
 								k
 							)] = list[i][k];
 					}
 				}
 
-				for (var k in dep) {
+				for (const k in dep) {
 					if (dep.hasOwnProperty(k)) {
 						deps.push(dep);
 						break;
@@ -1676,23 +1765,30 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 		return deps;
 	},
 
-	/** @private */
-	transformChoices: function() {
+	/**
+	 * @private
+	 * @returns {object} choices
+	 */
+	transformChoices() {
 		if (!Array.isArray(this.keylist) || this.keylist.length == 0)
 			return null;
 
-		var choices = {};
+		const choices = {};
 
-		for (var i = 0; i < this.keylist.length; i++)
+		for (let i = 0; i < this.keylist.length; i++)
 			choices[this.keylist[i]] = this.vallist[i];
 
 		return choices;
 	},
 
-	/** @private */
-	checkDepends: function(section_id) {
-		var config_name = this.uciconfig || this.section.uciconfig || this.map.config,
-		    active = this.map.isDependencySatisfied(this.deps, config_name, section_id);
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {boolean}
+	 */
+	checkDepends(section_id) {
+		const config_name = this.uciconfig ?? this.section.uciconfig ?? this.map.config;
+		const active = this.map.isDependencySatisfied(this.deps, config_name, section_id);
 
 		if (active)
 			this.updateDefaultValue(section_id);
@@ -1700,34 +1796,38 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 		return active;
 	},
 
-	/** @private */
-	updateDefaultValue: function(section_id) {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 */
+	updateDefaultValue(section_id) {
 		if (!L.isObject(this.defaults))
 			return;
 
-		var config_name = this.uciconfig || this.section.uciconfig || this.map.config,
-		    cfgvalue = L.toArray(this.cfgvalue(section_id))[0],
-		    default_defval = null, satisified_defval = null;
+		const config_name = this.uciconfig ?? this.section.uciconfig ?? this.map.config;
+		const cfgvalue = L.toArray(this.cfgvalue(section_id))[0];
+		let default_defval = null;
+		let satisfied_defval = null;
 
-		for (var value in this.defaults) {
+		for (const value in this.defaults) {
 			if (!this.defaults[value] || this.defaults[value].length == 0) {
 				default_defval = value;
 				continue;
 			}
 			else if (this.map.isDependencySatisfied(this.defaults[value], config_name, section_id)) {
-				satisified_defval = value;
+				satisfied_defval = value;
 				break;
 			}
 		}
 
-		if (satisified_defval == null)
-			satisified_defval = default_defval;
+		if (satisfied_defval == null)
+			satisfied_defval = default_defval;
 
-		var node = this.map.findElement('id', this.cbid(section_id));
-		if (node && node.getAttribute('data-changed') != 'true' && satisified_defval != null && cfgvalue == null)
-			dom.callClassMethod(node, 'setValue', satisified_defval);
+		const node = this.map.findElement('id', this.cbid(section_id));
+		if (node && node.getAttribute('data-changed') != 'true' && satisfied_defval != null && cfgvalue == null)
+			dom.callClassMethod(node, 'setValue', satisfied_defval);
 
-		this.default = satisified_defval;
+		this.default = satisfied_defval;
 	},
 
 	/**
@@ -1747,12 +1847,12 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * @returns {string}
 	 * Returns the element ID.
 	 */
-	cbid: function(section_id) {
+	cbid(section_id) {
 		if (section_id == null)
 			L.error('TypeError', 'Section ID required');
 
 		return 'cbid.%s.%s.%s'.format(
-			this.uciconfig || this.section.uciconfig || this.map.config,
+			this.uciconfig ?? this.section.uciconfig ?? this.map.config,
 			section_id, this.option);
 	},
 
@@ -1761,8 +1861,8 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * The default implementation of this method reads and returns the
 	 * underlying UCI option value (or the related JavaScript property for
-	 * `JSONMap` instances). It may be overwritten by user code to load data
-	 * from nonstandard sources.
+	 * {@link LuCI.form.JSONMap JSONMap} instances). It may be overridden by
+	 * user code to load data from non-standard sources.
 	 *
 	 * @param {string} section_id
 	 * The configuration section ID
@@ -1775,14 +1875,14 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * The return value of this function is filtered through `Promise.resolve()`
 	 * so it may return promises if overridden by user code.
 	 */
-	load: function(section_id) {
+	load(section_id) {
 		if (section_id == null)
 			L.error('TypeError', 'Section ID required');
 
 		return this.map.data.get(
-			this.uciconfig || this.section.uciconfig || this.map.config,
-			this.ucisection || section_id,
-			this.ucioption || this.option);
+			this.uciconfig ?? this.section.uciconfig ?? this.map.config,
+			this.ucisection ?? section_id,
+			this.ucioption ?? this.option);
 	},
 
 	/**
@@ -1794,13 +1894,13 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * @throws {TypeError}
 	 * Throws a `TypeError` exception when no `section_id` was specified.
 	 *
-	 * @return {LuCI.ui.AbstractElement|null}
+	 * @returns {LuCI.ui.AbstractElement|null}
 	 * Returns the `LuCI.ui` element instance or `null` in case the form
 	 * option implementation does not use `LuCI.ui` widgets.
 	 */
-	getUIElement: function(section_id) {
-		var node = this.map.findElement('id', this.cbid(section_id)),
-		    inst = node ? dom.findClassInstance(node) : null;
+	getUIElement(section_id) {
+		const node = this.map.findElement('id', this.cbid(section_id));
+		const inst = node ? dom.findClassInstance(node) : null;
 		return (inst instanceof ui.AbstractElement) ? inst : null;
 	},
 
@@ -1809,11 +1909,14 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * The default implementation of this method returns the cached return
 	 * value of [load()]{@link LuCI.form.AbstractValue#load}. It may be
-	 * overwritten by user code to obtain the configuration value in a
+	 * overridden by user code to obtain the configuration value in a
 	 * different way.
 	 *
 	 * @param {string} section_id
 	 * The configuration section ID
+	 *
+	 * @param {string} set_value
+	 * The value to assign
 	 *
 	 * @throws {TypeError}
 	 * Throws a `TypeError` exception when no `section_id` was specified.
@@ -1821,16 +1924,16 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * @returns {*}
 	 * Returns the configuration value.
 	 */
-	cfgvalue: function(section_id, set_value) {
+	cfgvalue(section_id, set_value) {
 		if (section_id == null)
 			L.error('TypeError', 'Section ID required');
 
 		if (arguments.length == 2) {
-			this.data = this.data || {};
+			this.data ??= {};
 			this.data[section_id] = set_value;
 		}
 
-		return this.data ? this.data[section_id] : null;
+		return this.data?.[section_id];
 	},
 
 	/**
@@ -1838,7 +1941,7 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * The default implementation of this method returns the current input
 	 * value of the underlying [LuCI.ui]{@link LuCI.ui.AbstractElement} widget.
-	 * It may be overwritten by user code to handle input values differently.
+	 * It may be overridden by user code to handle input values differently.
 	 *
 	 * @param {string} section_id
 	 * The configuration section ID
@@ -1849,18 +1952,18 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * @returns {*}
 	 * Returns the current input value.
 	 */
-	formvalue: function(section_id) {
-		var elem = this.getUIElement(section_id);
+	formvalue(section_id) {
+		const elem = this.getUIElement(section_id);
 		return elem ? elem.getValue() : null;
 	},
 
 	/**
 	 * Obtain a textual input representation.
 	 *
-	 * The default implementation of this method returns the HTML escaped
+	 * The default implementation of this method returns the HTML-escaped
 	 * current input value of the underlying
 	 * [LuCI.ui]{@link LuCI.ui.AbstractElement} widget. User code or specific
-	 * option element implementations may overwrite this function to apply a
+	 * option element implementations may override this function to apply a
 	 * different logic, e.g. to return `Yes` or `No` depending on the checked
 	 * state of checkbox elements.
 	 *
@@ -1873,8 +1976,8 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * @returns {string}
 	 * Returns the text representation of the current input value.
 	 */
-	textvalue: function(section_id) {
-		var cval = this.cfgvalue(section_id);
+	textvalue(section_id) {
+		let cval = this.cfgvalue(section_id);
 
 		if (cval == null)
 			cval = this.default;
@@ -1892,7 +1995,7 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * the user input, e.g. on keyup or blur events.
 	 *
 	 * The default implementation of this method does nothing and always
-	 * returns `true`. User code may overwrite this method to provide
+	 * returns `true`. User code may override this method to provide
 	 * additional validation logic which is not covered by data type
 	 * constraints.
 	 *
@@ -1905,11 +2008,42 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * @returns {*}
 	 * The method shall return `true` to accept the given value. Any other
-	 * return value is treated as failure, converted to a string and displayed
-	 * as error message to the user.
+	 * return value is treated as a failure, converted to a string and displayed
+	 * as an error message to the user.
 	 */
-	validate: function(section_id, value) {
+	validate(section_id, value) {
 		return true;
+	},
+
+	/**
+	 * Get the validator function for the widget, handling both single functions
+	 * and arrays of functions.
+	 *
+	 * @private
+	 * @param {string} section_id
+	 * The configuration section ID
+	 *
+	 * @returns {function()}
+	 * Returns a bound validator function suitable for passing to UI widgets.
+	 * If this.validate is an array, returns a wrapper that calls each validator
+	 * serially. Otherwise returns the bound validate method.
+	 */
+	getValidator(section_id) {
+		if (Array.isArray(this.validate)) {
+			const validators = this.validate;
+			const element = this;
+			return (value) => {
+				for (let val of validators) {
+					if (typeof(val) === 'function') {
+						const result = val.call(element, section_id, value);
+						if (result !== true)
+							return result;
+					}
+				}
+				return true;
+			};
+		}
+		return L.bind(this.validate, this, section_id);
 	},
 
 	/**
@@ -1922,8 +2056,8 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * Returns `true` if the input value currently is valid, otherwise it
 	 * returns `false`.
 	 */
-	isValid: function(section_id) {
-		var elem = this.getUIElement(section_id);
+	isValid(section_id) {
+		const elem = this.getUIElement(section_id);
 		return elem ? elem.isValid() : true;
 	},
 
@@ -1936,8 +2070,8 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * @returns {string}
 	 * The validation error at this time
 	 */
-	getValidationError: function (section_id) {
-		var elem = this.getUIElement(section_id);
+	getValidationError(section_id) {
+		const elem = this.getUIElement(section_id);
 		return elem ? elem.getValidationError() : '';
 	},
 
@@ -1954,14 +2088,19 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * Returns `true` if the option element currently is active, otherwise it
 	 * returns `false`.
 	 */
-	isActive: function(section_id) {
-		var field = this.map.findElement('data-field', this.cbid(section_id));
+	isActive(section_id) {
+		const field = this.map.findElement('data-field', this.cbid(section_id));
 		return (field != null && !field.classList.contains('hidden'));
 	},
 
-	/** @private */
-	setActive: function(section_id, active) {
-		var field = this.map.findElement('data-field', this.cbid(section_id));
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {boolean} active
+	 * @returns {boolean}
+	 */
+	setActive(section_id, active) {
+		const field = this.map.findElement('data-field', this.cbid(section_id));
 
 		if (field && field.classList.contains('hidden') == active) {
 			field.classList[active ? 'remove' : 'add']('hidden');
@@ -1975,9 +2114,13 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 		return false;
 	},
 
-	/** @private */
-	triggerValidation: function(section_id) {
-		var elem = this.getUIElement(section_id);
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {boolean}
+	 */
+	triggerValidation(section_id) {
+		const elem = this.getUIElement(section_id);
 		return elem ? elem.triggerValidation() : true;
 	},
 
@@ -1995,30 +2138,34 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 * validated or rejecting in case the input value does not meet the
 	 * validation constraints.
 	 */
-	parse: function(section_id) {
-		var active = this.isActive(section_id);
+	parse(section_id) {
+		const active = this.isActive(section_id);
 
 		if (active && !this.isValid(section_id)) {
-			var title = this.stripTags(this.title).trim(),
-			    error = this.getValidationError(section_id);
+			const title = this.stripTags(this.title).trim();
+			const error = this.getValidationError(section_id);
 
 			return Promise.reject(new TypeError(
-				_('Option "%s" contains an invalid input value.').format(title || this.option) + ' ' + error));
+				`${_('Option "%s" contains an invalid input value.').format(title || this.option)} ${error}`));
 		}
 
 		if (active) {
-			var cval = this.cfgvalue(section_id),
-			    fval = this.formvalue(section_id);
+			const cval = this.cfgvalue(section_id);
+			const fval = this.formvalue(section_id);
 
-			if (fval == null || fval == '') {
+			if (fval == null || fval == '' || (fval == this.default && (this.optional || this.rmempty))) {
 				if (this.rmempty || this.optional) {
 					return Promise.resolve(this.remove(section_id));
 				}
 				else {
-					var title = this.stripTags(this.title).trim();
+					const title = this.stripTags(this.title).trim();
+					const message = _('Option "%s" must not be empty.').format(title || this.option);
 
-					return Promise.reject(new TypeError(
-						_('Option "%s" must not be empty.').format(title || this.option)));
+					// The modal dialog saves silently, so mark the field and refresh the tab error counts.
+					this.getUIElement(section_id)?.setInvalid(message);
+					ui.tabs.updateTabs(null, this.map.root);
+
+					return Promise.reject(new TypeError(message));
 				}
 			}
 			else if (this.forcewrite || !isEqual(cval, fval)) {
@@ -2042,21 +2189,23 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * The default implementation simply sets the given input value in the
 	 * UCI configuration (or the associated JavaScript object property in
-	 * case of `JSONMap` forms). It may be overwritten by user code to
-	 * implement alternative save logic, e.g. to transform the input value
-	 * before it is written.
+	 * case of {@link LuCI.form.JSONMap JSONMap} forms). It may be overridden
+	 * by user code to implement alternative save logic, e.g. to transform the
+	 * input value before it is written.
 	 *
 	 * @param {string} section_id
 	 * The configuration section ID
 	 *
 	 * @param {string|string[]}	formvalue
 	 * The input value to write.
+	 *
+	 * @returns {null}
 	 */
-	write: function(section_id, formvalue) {
+	write(section_id, formvalue) {
 		return this.map.data.set(
-			this.uciconfig || this.section.uciconfig || this.map.config,
-			this.ucisection || section_id,
-			this.ucioption || this.option,
+			this.uciconfig ?? this.section.uciconfig ?? this.map.config,
+			this.ucisection ?? section_id,
+			this.ucioption ?? this.option,
 			formvalue);
 	},
 
@@ -2069,26 +2218,27 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
 	 *
 	 * The default implementation simply removes the associated option from the
 	 * UCI configuration (or the associated JavaScript object property in
-	 * case of `JSONMap` forms). It may be overwritten by user code to
-	 * implement alternative removal logic, e.g. to retain the original value.
+	 * case of {@link LuCI.form.JSONMap JSONMap} forms). It may be overridden
+	 * by  user code to implement alternative removal logic, e.g. to retain the
+	 * original value.
 	 *
 	 * @param {string} section_id
 	 * The configuration section ID
 	 */
-	remove: function(section_id) {
-		var this_cfg = this.uciconfig || this.section.uciconfig || this.map.config,
-		    this_sid = this.ucisection || section_id,
-		    this_opt = this.ucioption || this.option;
+	remove(section_id) {
+		const this_cfg = this.uciconfig ?? this.section.uciconfig ?? this.map.config;
+		const this_sid = this.ucisection ?? section_id;
+		const this_opt = this.ucioption ?? this.option;
 
-		for (var i = 0; i < this.section.children.length; i++) {
-			var sibling = this.section.children[i];
+		for (let i = 0; i < this.section.children.length; i++) {
+			const sibling = this.section.children[i];
 
 			if (sibling === this || sibling.ucioption == null)
 				continue;
 
-			var sibling_cfg = sibling.uciconfig || sibling.section.uciconfig || sibling.map.config,
-			    sibling_sid = sibling.ucisection || section_id,
-			    sibling_opt = sibling.ucioption || sibling.option;
+			const sibling_cfg = sibling.uciconfig ?? sibling.section.uciconfig ?? sibling.map.config;
+			const sibling_sid = sibling.ucisection ?? section_id;
+			const sibling_opt = sibling.ucioption ?? sibling.option;
 
 			if (this_cfg != sibling_cfg || this_sid != sibling_sid || this_opt != sibling_opt)
 				continue;
@@ -2112,7 +2262,7 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
  * @hideconstructor
  * @classdesc
  *
- * The `TypedSection` class maps all or - if `filter()` is overwritten - a
+ * The `TypedSection` class maps all or - if `filter()` is overridden - a
  * subset of the underlying UCI configuration sections of a given type.
  *
  * Layout wise, the configuration section instances mapped by the section
@@ -2122,7 +2272,7 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
  * value of the `addremove` property.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [section()]{@link LuCI.form.Map#section}.
  *
  * @param {string} section_type
@@ -2134,50 +2284,79 @@ var CBIAbstractValue = CBIAbstractElement.extend(/** @lends LuCI.form.AbstractVa
  * @param {string} [description]
  * The description text of the form section element.
  */
-var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSection.prototype */ {
+const CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSection.prototype */ {
 	__name__: 'CBI.TypedSection',
 
 	/**
 	 * If set to `true`, the user may add or remove instances from the form
-	 * section widget, otherwise only preexisting sections may be edited.
+	 * section widget, otherwise only pre-existing sections may be edited.
 	 * The default is `false`.
 	 *
-	 * @name LuCI.form.TypedSection.prototype#addremove
-	 * @type boolean
+	 * @memberof LuCI.form.TypedSection.prototype
+	 * @member addremove
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * If set to true, the title caption of the form section element which
+	 * is normally rendered before the start of the section content will
+	 * not be rendered in the UI. The default is false, meaning that the
+	 * title is rendered.
+	 *
+	 * @memberof LuCI.form.TypedSection.prototype
+	 * @member hidetitle
+	 * @type {boolean}
 	 * @default false
 	 */
 
 	/**
 	 * If set to `true`, mapped section instances are treated as anonymous
 	 * UCI sections, which means that section instance elements will be
-	 * rendered without title element and that no name is required when adding
+	 * rendered without a title element and that no name is required when adding
 	 * new sections. The default is `false`.
 	 *
-	 * @name LuCI.form.TypedSection.prototype#anonymous
-	 * @type boolean
+	 * @memberof LuCI.form.TypedSection.prototype
+	 * @member anonymous
+	 * @type {boolean}
 	 * @default false
 	 */
 
 	/**
 	 * When set to `true`, instead of rendering section instances one below
-	 * another, treat each instance as separate tab pane and render a tab menu
+	 * another, treat each instance as a separate tab pane and render a tab menu
 	 * at the top of the form section element, allowing the user to switch
 	 * among instances. The default is `false`.
 	 *
-	 * @name LuCI.form.TypedSection.prototype#tabbed
-	 * @type boolean
+	 * @memberof LuCI.form.TypedSection.prototype
+	 * @member tabbed
+	 * @type {boolean}
 	 * @default false
 	 */
 
 	/**
 	 * Override the caption used for the section add button at the bottom of
-	 * the section form element. If set to a string, it will be used as-is,
-	 * if set to a function, the function will be invoked and its return value
-	 * is used as caption, after converting it to a string. If this property
+	 * the section form element. Set to a string, it will be used as-is.
+	 * Set to a function, the function will be invoked and its return value
+	 * is used as a caption, after converting it to a string. If this property
 	 * is not set, the default is `Add`.
 	 *
-	 * @name LuCI.form.TypedSection.prototype#addbtntitle
-	 * @type string|function
+	 * @memberof LuCI.form.TypedSection.prototype
+	 * @member addbtntitle
+	 * @type {string|function()}
+	 * @default null
+	 */
+
+	/**
+	 * Override the caption used for the section delete button at the bottom of
+	 * the section form element. Set to a string, it will be used as-is.
+	 * Set to a function, the function will be invoked and its return value
+	 * is used as a caption, after converting it to a string. If this property
+	 * is not set, the default is `Delete`.
+	 *
+	 * @memberof LuCI.form.TypedSection.prototype
+	 * @member delbtntitle
+	 * @type {string|function()}
 	 * @default null
 	 */
 
@@ -2185,44 +2364,59 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
 	 * Override the UCI configuration name to read the section IDs from. By
 	 * default, the configuration name is inherited from the parent `Map`.
 	 * By setting this property, a deviating configuration may be specified.
-	 * The default is `null`, means inheriting from the parent form.
+	 * The default of `null` means inherit from the parent form.
 	 *
-	 * @name LuCI.form.TypedSection.prototype#uciconfig
-	 * @type string
+	 * @memberof LuCI.form.TypedSection.prototype
+	 * @member uciconfig
+	 * @type {string}
 	 * @default null
 	 */
 
 	/** @override */
-	cfgsections: function() {
-		return this.map.data.sections(this.uciconfig || this.map.config, this.sectiontype)
-			.map(function(s) { return s['.name'] })
+	cfgsections() {
+		return this.map.data.sections(this.uciconfig ?? this.map.config, this.sectiontype)
+			.map((s) => { return s['.name'] })
 			.filter(L.bind(this.filter, this));
 	},
 
-	/** @private */
-	handleAdd: function(ev, name) {
-		var config_name = this.uciconfig || this.map.config;
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @param {string} name
+	 * @returns {null}
+	 */
+	handleAdd(ev, name) {
+		const config_name = this.uciconfig ?? this.map.config;
 
 		this.map.data.add(config_name, this.sectiontype, name);
 		return this.map.save(null, true);
 	},
 
-	/** @private */
-	handleRemove: function(section_id, ev) {
-		var config_name = this.uciconfig || this.map.config;
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleRemove(section_id, ev) {
+		const config_name = this.uciconfig ?? this.map.config;
 
-		this.map.data.remove(config_name, section_id);
+		this.map.data?.remove(config_name, section_id);
 		return this.map.save(null, true);
 	},
 
-	/** @private */
-	renderSectionAdd: function(extra_class) {
+	/**
+	 * @private
+	 * @param {string} extra_class
+	 * @returns {Node}
+	 */
+	renderSectionAdd(extra_class) {
 		if (!this.addremove)
 			return E([]);
 
-		var createEl = E('div', { 'class': 'cbi-section-create' }),
-		    config_name = this.uciconfig || this.map.config,
-		    btn_title = this.titleFn('addbtntitle');
+		const createEl = E('div', { 'class': 'cbi-section-create' });
+		const config_name = this.uciconfig ?? this.map.config;
+		const btn_title = this.titleFn('addbtntitle');
 
 		if (extra_class != null)
 			createEl.classList.add(extra_class);
@@ -2230,13 +2424,13 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
 		if (this.anonymous) {
 			createEl.appendChild(E('button', {
 				'class': 'cbi-button cbi-button-add',
-				'title': btn_title || _('Add'),
+				'title': btn_title ?? _('Add'),
 				'click': ui.createHandlerFn(this, 'handleAdd'),
 				'disabled': this.map.readonly || null
-			}, [ btn_title || _('Add') ]));
+			}, [ btn_title ?? _('Add') ]));
 		}
 		else {
-			var nameEl = E('input', {
+			const nameEl = E('input', {
 				'type': 'text',
 				'class': 'cbi-section-create-name',
 				'disabled': this.map.readonly || null
@@ -2246,20 +2440,20 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
 				E('div', {}, nameEl),
 				E('button', {
 					'class': 'cbi-button cbi-button-add',
-					'title': btn_title || _('Add'),
-					'click': ui.createHandlerFn(this, function(ev) {
+					'title': btn_title ?? _('Add'),
+					'click': ui.createHandlerFn(this, (ev) => {
 						if (nameEl.classList.contains('cbi-input-invalid'))
 							return;
 
 						return this.handleAdd(ev, nameEl.value);
 					}),
 					'disabled': this.map.readonly || true
-				}, [ btn_title || _('Add') ])
+				}, [ btn_title ?? _('Add') ])
 			]);
 
 			if (this.map.readonly !== true) {
-				ui.addValidator(nameEl, 'uciname', true, function(v) {
-					var button = document.querySelector('.cbi-section-create > .cbi-button-add');
+				ui.addValidator(nameEl, 'uciname', true, (v) => {
+					const button = createEl.querySelector('.cbi-section-create > .cbi-button-add');
 					if (v !== '') {
 						button.disabled = null;
 						return true;
@@ -2275,30 +2469,40 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
 		return createEl;
 	},
 
-	/** @private */
-	renderSectionPlaceholder: function() {
+	/**
+	 * @private
+	 * @returns {Node}
+	 */
+	renderSectionPlaceholder() {
 		return E('em', _('This section contains no values yet'));
 	},
 
-	/** @private */
-	renderContents: function(cfgsections, nodes) {
-		var section_id = null,
-		    config_name = this.uciconfig || this.map.config,
-		    sectionEl = E('div', {
-				'id': 'cbi-%s-%s'.format(config_name, this.sectiontype),
-				'class': 'cbi-section',
-				'data-tab': (this.map.tabbed && !this.parentoption) ? this.sectiontype : null,
-				'data-tab-title': (this.map.tabbed && !this.parentoption) ? this.title || this.sectiontype : null
-			});
+	/**
+	 * @private
+	 * @param {string[]} cfgsections
+	 * @param {Node[]} nodes
+	 * @returns {Node[]}
+	 */
+	renderContents(cfgsections, nodes) {
+		const section_id = null;
+		const config_name = this.uciconfig ?? this.map.config;
 
-		if (this.title != null && this.title != '')
+		const sectionEl = E('div', {
+			'id': 'cbi-%s-%s'.format(config_name, this.sectiontype),
+			'class': 'cbi-section',
+			'data-tab': (this.map.tabbed && !this.parentoption) ? this.sectiontype : null,
+			'data-tab-title': (this.map.tabbed && !this.parentoption) ? this.title || this.sectiontype : null
+		});
+
+		if (this.title != null && this.title != '' && !this.hidetitle)
 			sectionEl.appendChild(E('h3', {}, this.title));
 
 		if (this.description != null && this.description != '')
 			sectionEl.appendChild(E('div', { 'class': 'cbi-section-descr' }, this.description));
 
-		for (var i = 0; i < nodes.length; i++) {
+		for (let i = 0; i < nodes.length; i++) {
 			if (this.addremove) {
+				const rem_btn_title = this.titleFn('delbtntitle', section_id);
 				sectionEl.appendChild(
 					E('div', { 'class': 'cbi-section-remove right' },
 						E('button', {
@@ -2307,7 +2511,7 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
 							'data-section-id': cfgsections[i],
 							'click': ui.createHandlerFn(this, 'handleRemove', cfgsections[i]),
 							'disabled': this.map.readonly || null
-						}, [ _('Delete') ])));
+						}, [ rem_btn_title ?? _('Delete') ])));
 			}
 
 			if (!this.anonymous)
@@ -2332,11 +2536,11 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
 	},
 
 	/** @override */
-	render: function() {
-		var cfgsections = this.cfgsections(),
-		    renderTasks = [];
+	render() {
+		const cfgsections = this.cfgsections();
+		const renderTasks = [];
 
-		for (var i = 0; i < cfgsections.length; i++)
+		for (let i = 0; i < cfgsections.length; i++)
 			renderTasks.push(this.renderUCISection(cfgsections[i]));
 
 		return Promise.all(renderTasks).then(this.renderContents.bind(this, cfgsections));
@@ -2350,7 +2554,7 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
  * @hideconstructor
  * @classdesc
  *
- * The `TableSection` class maps all or - if `filter()` is overwritten - a
+ * The `TableSection` class maps all or - if `filter()` is overridden - a
  * subset of the underlying UCI configuration sections of a given type.
  *
  * Layout wise, the configuration section instances mapped by the section
@@ -2360,7 +2564,7 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
  * value of the `addremove` property.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [section()]{@link LuCI.form.Map#section}.
  *
  * @param {string} section_type
@@ -2372,80 +2576,48 @@ var CBITypedSection = CBIAbstractSection.extend(/** @lends LuCI.form.TypedSectio
  * @param {string} [description]
  * The description text of the form section element.
  */
-var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.prototype */ {
+const CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.prototype */ {
 	__name__: 'CBI.TableSection',
 
 	/**
-	 * If set to `true`, the user may add or remove instances from the form
-	 * section widget, otherwise only preexisting sections may be edited.
-	 * The default is `false`.
-	 *
-	 * @name LuCI.form.TableSection.prototype#addremove
-	 * @type boolean
-	 * @default false
-	 */
-
-	/**
-	 * If set to `true`, mapped section instances are treated as anonymous
-	 * UCI sections, which means that section instance elements will be
-	 * rendered without title element and that no name is required when adding
-	 * new sections. The default is `false`.
-	 *
-	 * @name LuCI.form.TableSection.prototype#anonymous
-	 * @type boolean
-	 * @default false
-	 */
-
-	/**
-	 * Override the caption used for the section add button at the bottom of
-	 * the section form element. If set to a string, it will be used as-is,
-	 * if set to a function, the function will be invoked and its return value
-	 * is used as caption, after converting it to a string. If this property
-	 * is not set, the default is `Add`.
-	 *
-	 * @name LuCI.form.TableSection.prototype#addbtntitle
-	 * @type string|function
-	 * @default null
-	 */
-
-	/**
 	 * Override the per-section instance title caption shown in the first
-	 * column of the table unless `anonymous` is set to true. If set to a
-	 * string, it will be used as `String.format()` pattern with the name of
-	 * the underlying UCI section as first argument, if set to a function, the
-	 * function will be invoked with the section name as first argument and
-	 * its return value is used as caption, after converting it to a string.
+	 * column of the table unless `anonymous` is set to true. Set to a
+	 * string, it will be used as a `String.format()` pattern with the name of
+	 * the underlying UCI section as the first argument. Set to a function, the
+	 * function will be invoked with the section name as the first argument and
+	 * its return value used as a caption, after converting it to a string.
 	 * If this property is not set, the default is the name of the underlying
 	 * UCI configuration section.
 	 *
-	 * @name LuCI.form.TableSection.prototype#sectiontitle
-	 * @type string|function
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member sectiontitle
+	 * @type {string|function()}
 	 * @default null
 	 */
 
 	/**
 	 * Override the per-section instance modal popup title caption shown when
-	 * clicking the `More…` button in a section specifying `max_cols`. If set
-	 * to a string, it will be used as `String.format()` pattern with the name
-	 * of the underlying UCI section as first argument, if set to a function,
-	 * the function will be invoked with the section name as first argument and
-	 * its return value is used as caption, after converting it to a string.
+	 * clicking the `More…` button in a section specifying `max_cols`. Set
+	 * to a string, it will be used as a `String.format()` pattern with the name
+	 * of the underlying UCI section as the first argument. Set to a function,
+	 * the function will be invoked with the section name as the first argument, and
+	 * its return value is used as a caption after converting it to a string.
 	 * If this property is not set, the default is the name of the underlying
 	 * UCI configuration section.
 	 *
-	 * @name LuCI.form.TableSection.prototype#modaltitle
-	 * @type string|function
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member modaltitle
+	 * @type {string|function()}
 	 * @default null
 	 */
 
 	/**
-	 * Override the UCI configuration name to read the section IDs from. By
-	 * default, the configuration name is inherited from the parent `Map`.
-	 * By setting this property, a deviating configuration may be specified.
-	 * The default is `null`, means inheriting from the parent form.
+	 * Set a custom text for the actions column header row when actions buttons
+	 * are present.
 	 *
-	 * @name LuCI.form.TableSection.prototype#uciconfig
-	 * @type string
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member actionstitle
+	 * @type {string|function()}
 	 * @default null
 	 */
 
@@ -2458,54 +2630,125 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 	 * opening a modal dialog presenting all options elements in `NamedSection`
 	 * style when clicked.
 	 *
-	 * @name LuCI.form.TableSection.prototype#max_cols
-	 * @type number
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member max_cols
+	 * @type {number}
 	 * @default null
 	 */
 
 	/**
-	 * If set to `true`, alternating `cbi-rowstyle-1` and `cbi-rowstyle-2` CSS
+	 * Set to `true`, alternating `cbi-rowstyle-1` and `cbi-rowstyle-2` CSS
 	 * classes are added to the table row elements. Not all LuCI themes
 	 * implement these row style classes. The default is `false`.
 	 *
-	 * @name LuCI.form.TableSection.prototype#rowcolors
-	 * @type boolean
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member rowcolors
+	 * @type {boolean}
 	 * @default false
+	 */
+
+	/**
+	 * Set to `true`, a clone button is added to the button column, allowing
+	 * the user to clone section instances mapped by the section form element.
+	 * The default is `false`.
+	 *
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member cloneable
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Override the caption used for the section clone button at the bottom of
+	 * the section form element. Set to a string, it will be used as-is.
+	 * Set to a function, the function will be invoked and its return value
+	 * is used as a caption, after converting it to a string. If this property
+	 * is not set, the default is `Clone`.
+	 *
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member clonebtntitle
+	 * @type {string|function()}
+	 * @default null
 	 */
 
 	/**
 	 * Enables a per-section instance row `Edit` button which triggers a certain
-	 * action when clicked. If set to a string, the string value is used
-	 * as `String.format()` pattern with the name of the underlying UCI section
-	 * as first format argument. The result is then interpreted as URL which
+	 * action when clicked. Set to a string, the string value is used
+	 * as a `String.format()` pattern with the name of the underlying UCI section
+	 * as the first format argument. The result is then interpreted as a URL which
 	 * LuCI will navigate to when the user clicks the edit button.
 	 *
-	 * If set to a function, this function will be registered as click event
+	 * If set to a function, this function will be registered as a click event
 	 * handler on the rendered edit button, receiving the section instance
-	 * name as first and the DOM click event as second argument.
+	 * name as the first and the DOM click event as the second argument.
 	 *
-	 * @name LuCI.form.TableSection.prototype#extedit
-	 * @type string|function
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member extedit
+	 * @type {string|function()}
 	 * @default null
 	 */
 
 	/**
-	 * If set to `true`, a sort button is added to the last column, allowing
+	 * Optional table filtering for table sections.
+	 *
+	 * Set `filterrow` to `true` to display a filter header row in the generated
+	 * table with per-column text fields to search for string matches in the
+	 * column. The filter row appears after the titles row.
+	 *
+	 * The filters work cumulatively: text in each field shall match
+	 * an entry for the row to be displayed. The results are filtered live.
+	 * Matching is case-sensitive, and partial, i.e. part or all of the result 
+	 * includes the search string.
+	 *
+	 * The filter fields assume the placeholder text `Filter ` suffixed with
+	 * the column name, to ease correlation of filter fields to their corresponding
+	 * column entries on narrow displays which might fold the columns over 
+	 * multiple lines.
+	 *
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member filterrow
+	 * @type {boolean}
+	 * @default null
+	 */
+
+	/**
+	 * Optional footer row for table sections.
+	 *
+	 * Set `footer` to one of:
+	 *  - a function that returns a table row (`tr`) or node `E('...')`
+	 *  - an array of string cell contents (first entry maps to the name column
+	 * if present).
+	 *
+	 * This is useful for providing sum totals, extra function buttons or extra
+	 * space.
+	 *
+	 * The default implementation returns an empty node.
+	 *
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member footer
+	 * @type {string[]|function()}
+	 * @default `E([])`
+	 */
+
+	/**
+	 * Set to `true`, a sort button is added to the last column, allowing
 	 * the user to reorder the section instances mapped by the section form
 	 * element.
 	 *
-	 * @name LuCI.form.TableSection.prototype#sortable
-	 * @type boolean
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member sortable
+	 * @type {boolean}
 	 * @default false
 	 */
 
 	/**
-	 * If set to `true`, the header row with the options descriptions will
-	 * not be displayed. By default, descriptions row is automatically displayed
+	 * Set to `true`, the header row with the descriptions of options will
+	 * not be displayed. By default, the row of descriptions is automatically displayed
 	 * when at least one option has a description.
 	 *
-	 * @name LuCI.form.TableSection.prototype#nodescriptions
-	 * @type boolean
+	 * @memberof LuCI.form.TableSection.prototype
+	 * @member nodescriptions
+	 * @type {boolean}
 	 * @default false
 	 */
 
@@ -2515,78 +2758,130 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 	 * invoked.
 	 *
 	 * @override
-	 * @throws Throws an exception when invoked.
+	 * @throws {string} Throws an exception when invoked.
 	 */
-	tab: function() {
+	tab() {
 		throw 'Tabs are not supported by TableSection';
 	},
 
-	/** @private */
-	renderContents: function(cfgsections, nodes) {
-		var section_id = null,
-		    config_name = this.uciconfig || this.map.config,
-		    max_cols = isNaN(this.max_cols) ? this.children.length : this.max_cols,
-		    has_more = max_cols < this.children.length,
-		    drag_sort = this.sortable && !('ontouchstart' in window),
-		    touch_sort = this.sortable && ('ontouchstart' in window),
-		    sectionEl = E('div', {
-				'id': 'cbi-%s-%s'.format(config_name, this.sectiontype),
-				'class': 'cbi-section cbi-tblsection',
-				'data-tab': (this.map.tabbed && !this.parentoption) ? this.sectiontype : null,
-				'data-tab-title': (this.map.tabbed && !this.parentoption) ? this.title || this.sectiontype : null
-			}),
-			tableEl = E('table', {
-				'class': 'table cbi-section-table'
-			});
 
-		if (this.title != null && this.title != '')
+	/**
+	 * Clone the section_id, putting the clone immediately after if put_next
+	 * is true. Optionally supply a name for the new section_id.
+	 *
+	 * @private
+	 * @param {string} section_id
+	 * @param {boolean} put_next
+	 * @param {string} name
+	 * @returns {null}
+	 */
+	handleClone(section_id, put_next, ev, name) {
+		let config_name = this.uciconfig || this.map.config;
+
+		this.map.data.clone(config_name, this.sectiontype, section_id, put_next, name);
+		return this.map.save(null, true);
+	},
+
+	/**
+	 * @private
+	 * @param {string[]} cfgsections
+	 * @param {Node[]} nodes
+	 * @returns {Node}
+	 */
+	renderContents(cfgsections, nodes) {
+		const section_id = null;
+		const config_name = this.uciconfig ?? this.map.config;
+		const max_cols = this.max_cols ?? this.children.length;
+		const cloneable = this.cloneable;
+		const has_more = max_cols < this.children.length;
+		const drag_sort = this.sortable && !('ontouchstart' in window);
+		const touch_sort = this.sortable && ('ontouchstart' in window);
+
+		const sectionEl = E('div', {
+			'id': 'cbi-%s-%s'.format(config_name, this.sectiontype),
+			'class': 'cbi-section cbi-tblsection',
+			'data-tab': (this.map.tabbed && !this.parentoption) ? this.sectiontype : null,
+			'data-tab-title': (this.map.tabbed && !this.parentoption) ? this.title || this.sectiontype : null
+		});
+
+		const tableEl = E('table', {
+			'class': 'table cbi-section-table'
+		});
+
+		const theadEl = E('thead', {
+			'class': 'thead cbi-section-thead'
+		});
+
+		const tbodyEl = E('tbody', {
+			'class': 'tbody cbi-section-tbody'
+		});
+
+		const tfootEl = E('tfoot', {
+			'class': 'tfoot cbi-section-tfoot'
+		});
+
+		if (this.title != null && this.title != '' && !this.hidetitle)
 			sectionEl.appendChild(E('h3', {}, this.title));
 
 		if (this.description != null && this.description != '')
 			sectionEl.appendChild(E('div', { 'class': 'cbi-section-descr' }, this.description));
 
-		tableEl.appendChild(this.renderHeaderRows(max_cols));
+		theadEl.appendChild(this.renderHeaderRows(false));
 
-		for (var i = 0; i < nodes.length; i++) {
-			var sectionname = this.titleFn('sectiontitle', cfgsections[i]);
+		if(theadEl.hasChildNodes())
+			tableEl.appendChild(theadEl);
+
+		for (let i = 0; i < nodes.length; i++) {
+			let sectionname = this.titleFn('sectiontitle', cfgsections[i]);
 
 			if (sectionname == null)
 				sectionname = cfgsections[i];
 
-			var trEl = E('tr', {
+			const trEl = E('tr', {
 				'id': 'cbi-%s-%s'.format(config_name, cfgsections[i]),
 				'class': 'tr cbi-section-table-row',
 				'data-sid': cfgsections[i],
-				'draggable': (drag_sort || touch_sort) ? true : null,
-				'mousedown': drag_sort ? L.bind(this.handleDragInit, this) : null,
-				'dragstart': drag_sort ? L.bind(this.handleDragStart, this) : null,
 				'dragover': drag_sort ? L.bind(this.handleDragOver, this) : null,
 				'dragenter': drag_sort ? L.bind(this.handleDragEnter, this) : null,
 				'dragleave': drag_sort ? L.bind(this.handleDragLeave, this) : null,
 				'dragend': drag_sort ? L.bind(this.handleDragEnd, this) : null,
 				'drop': drag_sort ? L.bind(this.handleDrop, this) : null,
-				'touchmove': touch_sort ? L.bind(this.handleTouchMove, this) : null,
 				'touchend': touch_sort ? L.bind(this.handleTouchEnd, this) : null,
 				'data-title': (sectionname && (!this.anonymous || this.sectiontitle)) ? sectionname : null,
 				'data-section-id': cfgsections[i]
 			});
 
 			if (this.extedit || this.rowcolors)
-				trEl.classList.add(!(tableEl.childNodes.length % 2)
+				trEl.classList.add(!(tbodyEl.childNodes.length % 2)
 					? 'cbi-rowstyle-1' : 'cbi-rowstyle-2');
 
-			for (var j = 0; j < max_cols && nodes[i].firstChild; j++)
+			if  (sectionname && (!this.anonymous || this.sectiontitle)) {
+				trEl.appendChild(E('td', {'class': 'td cbi-value-field cbi-section-table-titles'}, [
+					(sectionname && (!this.anonymous || this.sectiontitle)) ? sectionname : null
+				]));
+			}
+
+			for (let j = 0; j < max_cols && nodes[i].firstChild; j++)
 				trEl.appendChild(nodes[i].firstChild);
 
 			trEl.appendChild(this.renderRowActions(cfgsections[i], has_more ? _('More…') : null));
-			tableEl.appendChild(trEl);
+			tbodyEl.appendChild(trEl);
 		}
 
 		if (nodes.length == 0)
-			tableEl.appendChild(E('tr', { 'class': 'tr cbi-section-table-row placeholder' },
+			tbodyEl.appendChild(E('tr', { 'class': 'tr cbi-section-table-row placeholder' },
 				E('td', { 'class': 'td' }, this.renderSectionPlaceholder())));
 
+		tableEl.appendChild(tbodyEl);
+
+		tfootEl.appendChild(this.renderFooterRows(false));
+
+		if (tfootEl.hasChildNodes())
+			tableEl.appendChild(tfootEl);
+
 		sectionEl.appendChild(tableEl);
+
+		setTimeout(() => { try { this.stabilizeActionColumnWidth(tableEl); } catch (e) {} }, 0);
 
 		sectionEl.appendChild(this.renderSectionAdd('cbi-tblsection-create'));
 
@@ -2595,16 +2890,21 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		return sectionEl;
 	},
 
-	/** @private */
-	renderHeaderRows: function(max_cols, has_action) {
-		var has_titles = false,
-		    has_descriptions = false,
-		    max_cols = isNaN(this.max_cols) ? this.children.length : this.max_cols,
-		    has_more = max_cols < this.children.length,
-		    anon_class = (!this.anonymous || this.sectiontitle) ? 'named' : 'anonymous',
-		    trEls = E([]);
+	/**
+	 * @private
+	 * @param {boolean} has_action
+	 * @returns {Node[]}
+	 */
+	renderHeaderRows(has_action) {
+		let has_titles = false;
+		let has_descriptions = false;
+		const max_cols = this.max_cols ?? this.children.length;
+		const has_more = max_cols < this.children.length;
+		const anon_class = (!this.anonymous || this.sectiontitle) ? 'named' : 'anonymous';
+		const tableFilter = uci.get('luci', 'main', 'tablefilters') || false;
+		const trEls = E([]);
 
-		for (var i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
+		for (let i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
 			if (opt.modalonly)
 				continue;
 
@@ -2613,13 +2913,20 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		}
 
 		if (has_titles) {
-			var trEl = E('tr', {
-				'class': 'tr cbi-section-table-titles ' + anon_class,
-				'data-title': (!this.anonymous || this.sectiontitle) ? _('Name') : null,
+			const trEl = E('tr', {
+				'class': `tr cbi-section-table-titles ${anon_class}`,
 				'click': this.sortable ? ui.createHandlerFn(this, 'handleSort') : null
 			});
 
-			for (var i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
+			if (!this.anonymous || this.sectiontitle) {
+				trEl.appendChild(E('th', {
+					'class': 'th cbi-section-table-cell',
+					'data-sortable-row': this.sortable ? '' : null
+					},	(!this.anonymous || this.sectiontitle) ? _('Name') : null
+				));
+			}
+
+			for (let i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
 				if (opt.modalonly)
 					continue;
 
@@ -2631,32 +2938,132 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 
 				if (opt.width != null)
 					trEl.lastElementChild.style.width =
-						(typeof(opt.width) == 'number') ? opt.width+'px' : opt.width;
+						(typeof(opt.width) == 'number') ? `${opt.width}px` : opt.width;
 
 				if (opt.titleref)
 					trEl.lastElementChild.appendChild(E('a', {
 						'href': opt.titleref,
 						'class': 'cbi-title-ref',
-						'title': this.titledesc || _('Go to relevant configuration page')
+						'title': this.titledesc ?? _('Go to relevant configuration page')
 					}, opt.title));
 				else
 					dom.content(trEl.lastElementChild, opt.title);
 			}
 
-			if (this.sortable || this.extedit || this.addremove || has_more || has_action)
+			if (this.sortable || this.extedit || this.addremove || has_more || has_action || this.cloneable) {
+				const rawTitle = (this.actionstitle !== undefined) ? this.actionstitle : null;
+				const actionsTitle = (typeof rawTitle === 'function') ? rawTitle.call(this, has_action) : rawTitle;
 				trEl.appendChild(E('th', {
 					'class': 'th cbi-section-table-cell cbi-section-actions'
-				}));
+				}, (actionsTitle !== undefined) ? actionsTitle : null));
+			}
 
 			trEls.appendChild(trEl);
 		}
 
+		if (this.filterrow && tableFilter) {
+			const filterTr = E('tr', { 'class': `tr cbi-section-table-filter cbi-section-table-titles ${anon_class}` });
+
+			if (!this.anonymous || this.sectiontitle) {
+				filterTr.appendChild(E('th', { 'class': 'th cbi-section-table-cell' }, [
+					E('input', {
+						'type': 'text',
+						'class': 'cbi-input cbi-section-filter',
+						'placeholder': _('Filter'),
+					})
+				]));
+			}
+
+			for (let i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
+				if (opt.modalonly) continue;
+				const f = /flag/i.test(opt.__name__);
+
+				const th = E('th', { 'class': 'th cbi-section-table-cell' }, [
+					E('input', {
+						'type': 'text',
+						'class': 'cbi-input cbi-section-filter',
+						'placeholder': f ? _('0/1') : _('Filter') + ' ' + opt.title,
+						'maxlength': f ? 1 : '',
+						'style': f ? 'width: 30px;' : '',
+					})
+				]);
+
+				if (opt.width != null) th.style.width = (typeof(opt.width) == 'number') ? `${opt.width}px` : opt.width;
+				filterTr.appendChild(th);
+			}
+
+			if (this.sortable || this.extedit || this.addremove || has_more || has_action || this.cloneable) {
+				filterTr.appendChild(E('th', { 'class': 'th cbi-section-table-cell cbi-section-actions' }, [
+					E('button', {
+						'class': 'btn cbi-button cbi-button-neutral',
+						'type': 'button',
+						'title': _('Reset filters'),
+						'click': () => {
+							const inputs = filterTr.querySelectorAll('input.cbi-section-filter');
+							inputs.forEach(i => {
+								i.value = '';
+								i.dispatchEvent(new Event('input', { bubbles: true }));
+							});
+							const tbl = filterTr.closest('table');
+							try { this.stabilizeActionColumnWidth(tbl); } catch (e) { }
+						}
+					}, [ _('Reset') ])
+				]));
+			}
+
+			const attachFn = (input) => {
+				input.addEventListener('input', (ev) => {
+					const tbl = ev.target.closest('table');
+					if (!tbl) return;
+
+					const inputs = tbl.querySelectorAll('tr.cbi-section-table-filter input');
+					const col_filts = Array.from(inputs).map(i => i.value.trim());
+					const rows = tbl.querySelectorAll('tr.tr.cbi-section-table-row');
+
+					rows.forEach(row => {
+						const cells = Array.from(row.children)
+							.filter(c => c.classList && c.classList.contains('td'));
+
+						let hide = false;
+
+						for (let k = 0; k < col_filts.length; k++) {
+							if (!col_filts[k]) continue;
+
+							let txt;
+							const cell = cells[k];
+
+							const checked = cell?.querySelector('input[type="checkbox"]')?.checked;
+							const select = cell?.querySelector('select');
+							const checkbox = checked !== undefined;
+
+							if (checkbox)
+								txt = checked ? '1' : '0';
+							else if (select)
+								txt = Array.from(select.selectedOptions)
+									.map(opt => opt.textContent || opt.value.toLowerCase())
+									.join(' ');
+							else
+								txt = cell.textContent || '';
+
+							if (!txt.includes(col_filts[k])) { hide = true; break; }
+						}
+						row.style.display = hide ? 'none' : '';
+					});
+					try { this.stabilizeActionColumnWidth(tbl); } catch (e) { /* ignore */ }
+				});
+			};
+
+			filterTr.querySelectorAll('input').forEach(attachFn);
+
+			trEls.appendChild(filterTr);
+		}
+
 		if (has_descriptions && !this.nodescriptions) {
-			var trEl = E('tr', {
-				'class': 'tr cbi-section-table-descr ' + anon_class
+			const trEl = E('tr', {
+				'class': `tr cbi-section-table-descr ${anon_class}`
 			});
 
-			for (var i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
+			for (let i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
 				if (opt.modalonly)
 					continue;
 
@@ -2667,13 +3074,16 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 
 				if (opt.width != null)
 					trEl.lastElementChild.style.width =
-						(typeof(opt.width) == 'number') ? opt.width+'px' : opt.width;
+						(typeof(opt.width) == 'number') ? `${opt.width}px` : opt.width;
 			}
 
-			if (this.sortable || this.extedit || this.addremove || has_more || has_action)
+			if (this.sortable || this.extedit || this.addremove || has_more || has_action || this.cloneable) {
+				const rawTitle = (this.actionstitle !== undefined) ? this.actionstitle : null;
+				const actionsTitle = (typeof rawTitle === 'function') ? rawTitle.call(this, has_action) : rawTitle;
 				trEl.appendChild(E('th', {
 					'class': 'th cbi-section-table-cell cbi-section-actions'
-				}));
+				}, (actionsTitle !== undefined) ? actionsTitle : null));
+			}
 
 			trEls.appendChild(trEl);
 		}
@@ -2681,42 +3091,148 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		return trEls;
 	},
 
-	/** @private */
-	renderRowActions: function(section_id, more_label) {
-		var config_name = this.uciconfig || this.map.config;
-
-		if (!this.sortable && !this.extedit && !this.addremove && !more_label)
+	/**
+	 * @private
+	 * @param {boolean} has_action
+	 * @returns {Node}
+	 */
+	renderFooterRows(has_action) {
+		if (this.footer == null)
 			return E([]);
 
-		var tdEl = E('td', {
+		const max_cols = this.max_cols ?? this.children.length;
+		const has_more = max_cols < this.children.length;
+		const anon_class = (!this.anonymous || this.sectiontitle) ? 'named' : 'anonymous';
+
+		if (typeof this.footer === 'function') {
+			const node = this.footer.call(this, has_action);
+			return node || E([]);
+		}
+
+		const values = Array.isArray(this.footer) ? this.footer : [];
+		let idx = 0;
+		const trEl = E('tr', { 'class': `tr cbi-section-table-footer ${anon_class}` });
+
+		if (!this.anonymous || this.sectiontitle) {
+			trEl.appendChild(E('td', { 'class': 'td cbi-value-field cbi-section-table-titles' }, values[idx++] ?? null));
+		}
+
+		for (let i = 0, opt; i < max_cols && (opt = this.children[i]) != null; i++) {
+			if (opt.modalonly)
+				continue;
+
+			trEl.appendChild(E('td', { 'class': 'td', 'data-widget': opt.__name__ }, values[idx++] ?? null));
+		}
+
+		if (this.sortable || this.extedit || this.addremove || has_more || has_action || this.cloneable) {
+			trEl.appendChild(E('td', { 'class': 'td cbi-section-actions' }, values[idx++] ?? null));
+		}
+
+		return trEl;
+	},
+
+
+	/**
+	 * Ensure the actions column keeps a stable width even when rows are hidden
+	 * (e.g., due to filtering). Measures the widest actions cell and applies
+	 * a fixed width to header/filter/footer/action cells. Stores measured width
+	 * in dataset so filtering won't collapse the column if all rows are hidden.
+	 *
+	 * @private
+	 * @param {Node} tableEl
+	 */
+	stabilizeActionColumnWidth(tableEl) {
+		if (!tableEl || !tableEl.querySelector) return;
+
+		const actionDivs = Array.from(tableEl.querySelectorAll('td.cbi-section-actions > div'));
+		let max = 0;
+		actionDivs.forEach(div => {
+			if (div && div.offsetWidth) max = Math.max(max, div.offsetWidth);
+		});
+
+		const saved = parseInt(tableEl.dataset.actionColWidth || '0', 10) || 0;
+		if (max <= 0 && saved > 0) max = saved;
+		if (max <= 0) return; // nothing measurable
+
+		tableEl.dataset.actionColWidth = String(max);
+		const px = `${max}px`;
+
+		const setStyles = (el) => {
+			if (!el) return;
+			el.style.minWidth = px;
+			el.style.width = px;
+		};
+
+		setStyles(tableEl.querySelector('th.cbi-section-actions'));
+		setStyles(tableEl.querySelector('tr.cbi-section-table-filter th.cbi-section-actions'));
+		setStyles(tableEl.querySelector('tr.cbi-section-table-footer td.cbi-section-actions'));
+		actionDivs.forEach(div => setStyles(div.parentNode));
+
+		// attach a single resize handler per table to recalc on viewport changes
+		if (!tableEl.__actionColResizeAttached) {
+			tableEl.__actionColResizeAttached = true;
+			window.addEventListener('resize', () => {
+				delete tableEl.dataset.actionColWidth; // force re-measure
+				this.stabilizeActionColumnWidth(tableEl);
+			});
+		}
+	},
+
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {string} more_label
+	 * @param {Node} trEl
+	 * @returns {Node}
+	 */
+	renderRowActions(section_id, more_label, trEl) {
+		const config_name = this.uciconfig ?? this.map.config;
+
+		if (!this.sortable && !this.extedit && !this.addremove && !more_label && !this.cloneable)
+			return E([]);
+
+		const tdEl = E('td', {
 			'class': 'td cbi-section-table-cell nowrap cbi-section-actions'
 		}, E('div'));
 
 		if (this.sortable) {
-			dom.append(tdEl.lastElementChild, [
-				E('button', {
-					'title': _('Drag to reorder'),
-					'class': 'cbi-button drag-handle center',
-					'style': 'cursor:move',
-					'disabled': this.map.readonly || null
-				}, '☰')
-			]);
+			const touch_sort = ('ontouchstart' in window);
+			const dragHandleProps = {
+				'title': _('Drag to reorder'),
+				'class': 'cbi-button drag-handle center',
+				'style': 'cursor:move; user-select:none; -webkit-user-select:none; display:inline-block;',
+				'draggable': !touch_sort,
+				'dragstart': !touch_sort ? L.bind(function(ev) {
+					this.handleDragStart(ev, trEl);
+				}, this) : null,
+				'dragend': !touch_sort ? L.bind(function(ev) {
+					this.handleDragEnd(ev, trEl);
+				}, this) : null,
+				'touchmove': touch_sort ? L.bind(function(ev) {
+					this.handleTouchMove(ev);
+				}, this) : null,
+				'touchend': touch_sort ? L.bind(function(ev) {
+					this.handleTouchEnd(ev);
+				}, this) : null
+			};
+			const dragHandle = E('button', dragHandleProps, '☰');
+			dom.append(tdEl.lastElementChild, [ dragHandle ]);
 		}
 
 		if (this.extedit) {
-			var evFn = null;
+			let evFn = null;
 
 			if (typeof(this.extedit) == 'function')
 				evFn = L.bind(this.extedit, this);
 			else if (typeof(this.extedit) == 'string')
-				evFn = L.bind(function(sid, ev) {
+				evFn = L.bind((sid, ev) => {
 					location.href = this.extedit.format(sid);
 				}, this, section_id);
 
 			dom.append(tdEl.lastElementChild,
 				E('button', {
 					'title': _('Edit'),
-					'class': 'cbi-button cbi-button-edit',
+					'class': 'btn cbi-button cbi-button-edit',
 					'click': evFn
 				}, [ _('Edit') ])
 			);
@@ -2726,51 +3242,78 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 			dom.append(tdEl.lastElementChild,
 				E('button', {
 					'title': more_label,
-					'class': 'cbi-button cbi-button-edit',
+					'class': 'btn cbi-button cbi-button-edit',
 					'click': ui.createHandlerFn(this, 'renderMoreOptionsModal', section_id)
 				}, [ more_label ])
 			);
 		}
 
-		if (this.addremove) {
-			var btn_title = this.titleFn('removebtntitle', section_id);
+		if (this.cloneable) {
+			const btn_title = this.titleFn('clonebtntitle', section_id);
 
 			dom.append(tdEl.lastElementChild,
 				E('button', {
-					'title': btn_title || _('Delete'),
-					'class': 'cbi-button cbi-button-remove',
+					'title': btn_title || _('Clone'),
+					'class': 'btn cbi-button cbi-button-neutral',
+					'click': ui.createHandlerFn(this, 'handleClone', section_id, true),
+					'disabled': this.map.readonly || null
+				}, [ btn_title || _('Clone') ])
+			);
+		}
+
+		if (this.addremove) {
+			const btn_title = this.titleFn('delbtntitle', section_id);
+
+			dom.append(tdEl.lastElementChild,
+				E('button', {
+					'title': btn_title ?? _('Delete'),
+					'class': 'btn cbi-button cbi-button-remove',
 					'click': ui.createHandlerFn(this, 'handleRemove', section_id),
 					'disabled': this.map.readonly || null
-				}, [ btn_title || _('Delete') ])
+				}, [ btn_title ?? _('Delete') ])
 			);
 		}
 
 		return tdEl;
 	},
 
-	/** @private */
-	handleDragInit: function(ev) {
+	/**
+	 * @private
+	 * @param {Event} ev
+	 */
+	handleDragInit(ev) {
 		scope.dragState = { node: ev.target };
 	},
 
-	/** @private */
-	handleDragStart: function(ev) {
-		if (!scope.dragState || !scope.dragState.node.classList.contains('drag-handle')) {
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @param {Node} trEl
+	 * @returns {boolean}
+	 */
+	handleDragStart(ev, trEl) {
+		// Only allow drag from the handle
+		if (!ev.target || !ev.target.classList || !ev.target.classList.contains('drag-handle')) {
 			scope.dragState = null;
-			ev.preventDefault();
 			return false;
 		}
-
-		scope.dragState.node = dom.parent(scope.dragState.node, '.tr');
+		// Set the row as the drag source
+		scope.dragState = scope.dragState || {};
+		scope.dragState.node = trEl || dom.parent(ev.target, '.tr');
 		ev.dataTransfer.setData('text', 'drag');
 		ev.target.style.opacity = 0.4;
 	},
 
-	/** @private */
-	handleDragOver: function(ev) {
-		var n = scope.dragState.targetNode,
-		    r = scope.dragState.rect,
-		    t = r.top + r.height / 2;
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {boolean}
+	 */
+	handleDragOver(ev) {
+		if (scope.dragState === null ) return;
+		const n = scope.dragState.targetNode;
+		const r = scope.dragState.rect;
+		const t = r.top + r.height / 2;
 
 		if (ev.clientY <= t) {
 			n.classList.remove('drag-over-below');
@@ -2786,50 +3329,78 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		return false;
 	},
 
-	/** @private */
-	handleDragEnter: function(ev) {
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleDragEnter(ev) {
+		if (scope.dragState === null ) return;
 		scope.dragState.rect = ev.currentTarget.getBoundingClientRect();
 		scope.dragState.targetNode = ev.currentTarget;
 	},
 
-	/** @private */
-	handleDragLeave: function(ev) {
+	/**
+	 * @private
+	 * @param {Event} ev
+	 */
+	handleDragLeave(ev) {
 		ev.currentTarget.classList.remove('drag-over-above');
 		ev.currentTarget.classList.remove('drag-over-below');
 	},
 
-	/** @private */
-	handleDragEnd: function(ev) {
-		var n = ev.target;
-
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @param {Node} trEl
+	 * @returns {boolean}
+	 */
+	handleDragEnd(ev, trEl) {
+		let n;
+		if (trEl) {
+			n = trEl;
+		} else if (ev.target && typeof ev.target.closest === 'function') {
+			n = ev.target.closest('tr');
+		} else {
+			// Fall-back: skip if no valid row
+			return;
+		}
+		if (!n) return;
+		// Reset drag handle visual state
+		n.querySelector('.drag-handle').style.opacity = '';
 		n.style.opacity = '';
 		n.classList.add('flash');
 		n.parentNode.querySelectorAll('.drag-over-above, .drag-over-below')
-			.forEach(function(tr) {
+			.forEach((tr) => {
 				tr.classList.remove('drag-over-above');
 				tr.classList.remove('drag-over-below');
 			});
 	},
 
-	/** @private */
-	handleDrop: function(ev) {
-		var s = scope.dragState;
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {boolean|null}
+	 */
+	handleDrop(ev) {
+		const s = scope.dragState;
+		if (!s) return;
 
 		if (s.node && s.targetNode) {
-			var config_name = this.uciconfig || this.map.config,
-			    ref_node = s.targetNode,
-			    after = false;
+			const config_name = this.uciconfig ?? this.map.config;
+			let ref_node = s.targetNode;
+			let after = false;
 
-		    if (ref_node.classList.contains('drag-over-below')) {
-		    	ref_node = ref_node.nextElementSibling;
-		    	after = true;
-		    }
+			if (ref_node.classList.contains('drag-over-below')) {
+				ref_node = ref_node.nextElementSibling;
+				after = true;
+			}
 
-		    var sid1 = s.node.getAttribute('data-sid'),
-		        sid2 = s.targetNode.getAttribute('data-sid');
+			const sid1 = s.node.getAttribute('data-sid');
+			const sid2 = s.targetNode.getAttribute('data-sid');
 
-		    s.node.parentNode.insertBefore(s.node, ref_node);
-		    this.map.data.move(config_name, sid1, sid2, after);
+			s.node.parentNode.insertBefore(s.node, ref_node);
+			this.map.data.move(config_name, sid1, sid2, after);
 		}
 
 		scope.dragState = null;
@@ -2839,13 +3410,19 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		return false;
 	},
 
-	/** @private */
-	determineBackgroundColor: function(node) {
-		var r = 255, g = 255, b = 255;
+	/**
+	 * @private
+	 * @param {Node} node
+	 * @returns {number[]}
+	 */
+	determineBackgroundColor(node) {
+		let r = 255;
+		let g = 255;
+		let b = 255;
 
 		while (node) {
-			var s = window.getComputedStyle(node),
-			    c = (s.getPropertyValue('background-color') || '').replace(/ /g, '');
+			const s = window.getComputedStyle(node);
+			const c = (s.getPropertyValue('background-color') ?? '').replace(/ /g, '');
 
 			if (c != '' && c != 'transparent' && c != 'rgba(0,0,0,0)') {
 				if (/^#([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/i.test(c)) {
@@ -2868,25 +3445,29 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		return [ r, g, b ];
 	},
 
-	/** @private */
-	handleTouchMove: function(ev) {
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleTouchMove(ev) {
 		if (!ev.target.classList.contains('drag-handle'))
 			return;
 
-		var touchLoc = ev.targetTouches[0],
-		    rowBtn = ev.target,
-		    rowElem = dom.parent(rowBtn, '.tr'),
-		    htmlElem = document.querySelector('html'),
-		    dragHandle = document.querySelector('.touchsort-element'),
-		    viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+		const touchLoc = ev.targetTouches[0];
+		const rowBtn = ev.target;
+		const rowElem = dom.parent(rowBtn, '.tr');
+		const htmlElem = document.querySelector('html');
+		let dragHandle = document.querySelector('.touchsort-element');
+		const viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight ?? 0);
 
 		if (!dragHandle) {
-			var rowRect = rowElem.getBoundingClientRect(),
-			    btnRect = rowBtn.getBoundingClientRect(),
-			    paddingLeft = btnRect.left - rowRect.left,
-			    paddingRight = rowRect.right - btnRect.right,
-			    colorBg = this.determineBackgroundColor(rowElem),
-			    colorFg = (colorBg[0] * 0.299 + colorBg[1] * 0.587 + colorBg[2] * 0.114) > 186 ? [ 0, 0, 0 ] : [ 255, 255, 255 ];
+			const rowRect = rowElem.getBoundingClientRect();
+			const btnRect = rowBtn.getBoundingClientRect();
+			const paddingLeft = btnRect.left - rowRect.left;
+			const paddingRight = rowRect.right - btnRect.right;
+			const colorBg = this.determineBackgroundColor(rowElem);
+			const colorFg = (colorBg[0] * 0.299 + colorBg[1] * 0.587 + colorBg[2] * 0.114) > 186 ? [ 0, 0, 0 ] : [ 255, 255, 255 ];
 
 			dragHandle = E('div', { 'class': 'touchsort-element' }, [
 				E('strong', [ rowElem.getAttribute('data-title') ]),
@@ -2897,10 +3478,10 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 				position: 'absolute',
 				boxShadow: '0 0 3px rgba(%d, %d, %d, 1)'.format(colorFg[0], colorFg[1], colorFg[2]),
 				background: 'rgba(%d, %d, %d, 0.8)'.format(colorBg[0], colorBg[1], colorBg[2]),
-				top: rowRect.top + 'px',
-				left: rowRect.left + 'px',
-				width: rowRect.width + 'px',
-				height: (rowBtn.offsetHeight + 4) + 'px'
+				top: `${rowRect.top}px`,
+				left: `${rowRect.left}px`,
+				width: `${rowRect.width}px`,
+				height: `${rowBtn.offsetHeight + 4}px`
 			});
 
 			Object.assign(dragHandle.firstElementChild.style, {
@@ -2911,14 +3492,14 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 				textOverflow: 'ellipsis',
 				left: (paddingRight > paddingLeft) ? '' : '5px',
 				right: (paddingRight > paddingLeft) ? '5px' : '',
-				width: (Math.max(paddingLeft, paddingRight) - 10) + 'px'
+				width: `${Math.max(paddingLeft, paddingRight) - 10}px`
 			});
 
 			Object.assign(dragHandle.lastElementChild.style, {
 				position: 'absolute',
 				top: '2px',
-				left: paddingLeft + 'px',
-				width: rowBtn.offsetWidth + 'px'
+				left: `${paddingLeft}px`,
+				width: `${rowBtn.offsetWidth}px`
 			});
 
 			document.body.appendChild(dragHandle);
@@ -2927,13 +3508,13 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 			rowBtn.blur();
 		}
 
-		dragHandle.style.top = (touchLoc.pageY - (parseInt(dragHandle.style.height) / 2)) + 'px';
+		dragHandle.style.top = `${touchLoc.pageY - (parseInt(dragHandle.style.height) / 2)}px`;
 
-		rowElem.parentNode.querySelectorAll('[draggable]').forEach(function(tr, i, trs) {
-			var trRect = tr.getBoundingClientRect(),
-			    yTop = trRect.top + window.scrollY,
-			    yBottom = trRect.bottom + window.scrollY,
-			    yMiddle = yTop + ((yBottom - yTop) / 2);
+		rowElem.parentNode.querySelectorAll('.cbi-section-table-row').forEach((tr, i, trs) => {
+			const trRect = tr.getBoundingClientRect();
+			const yTop = trRect.top + window.scrollY;
+			const yBottom = trRect.bottom + window.scrollY;
+			const yMiddle = yTop + ((yBottom - yTop) / 2);
 
 			tr.classList.remove('drag-over-above', 'drag-over-below');
 
@@ -2949,35 +3530,42 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		ev.preventDefault();
 
 		if (touchLoc.clientY < 30)
-			window.requestAnimationFrame(function() { htmlElem.scrollTop -= 30 });
+			window.requestAnimationFrame(() => { htmlElem.scrollTop -= 30 });
 		else if (touchLoc.clientY > viewportHeight - 30)
-			window.requestAnimationFrame(function() { htmlElem.scrollTop += 30 });
+			window.requestAnimationFrame(() => { htmlElem.scrollTop += 30 });
 	},
 
-	/** @private */
-	handleTouchEnd: function(ev) {
-		var rowElem = dom.parent(ev.target, '.tr'),
-		    htmlElem = document.querySelector('html'),
-		    dragHandle = document.querySelector('.touchsort-element'),
-		    targetElem = rowElem.parentNode.querySelector('.drag-over-above, .drag-over-below'),
-		    viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleTouchEnd(ev) {
+		const rowElem = dom.parent(ev.target, '.tr');
+		const htmlElem = document.querySelector('html');
+		const dragHandle = document.querySelector('.touchsort-element');
+		const targetElem = rowElem.parentNode.querySelector('.drag-over-above, .drag-over-below');
+		const viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight ?? 0);
 
 		if (!dragHandle)
 			return;
 
+		// Reset drag handle visual state
+		dragHandle.style.opacity = '';
+
 		if (targetElem) {
-		    var isBelow = targetElem.classList.contains('drag-over-below');
+			const isBelow = targetElem.classList.contains('drag-over-below');
 
 			rowElem.parentNode.insertBefore(rowElem, isBelow ? targetElem.nextElementSibling : targetElem);
 
 			this.map.data.move(
-				this.uciconfig || this.map.config,
+				this.uciconfig ?? this.map.config,
 				rowElem.getAttribute('data-sid'),
 				targetElem.getAttribute('data-sid'),
 				isBelow);
 
-			window.requestAnimationFrame(function() {
-				var rowRect = rowElem.getBoundingClientRect();
+			window.requestAnimationFrame(() => {
+				const rowRect = rowElem.getBoundingClientRect();
 
 				if (rowRect.top < 50)
 					htmlElem.scrollTop = (htmlElem.scrollTop + rowRect.top - 50);
@@ -2993,14 +3581,19 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		document.body.removeChild(dragHandle);
 	},
 
-	/** @private */
-	handleModalCancel: function(modalMap, ev) {
-		var prevNode = this.getPreviousModalMap(),
-		    resetTasks = Promise.resolve();
+	/**
+	 * @private
+	 * @param {Node} modalMap
+	 * @param {Event} ev
+	 * @returns {Promise}
+	 */
+	handleModalCancel(modalMap, ev) {
+		const prevNode = this.getPreviousModalMap();
+		let resetTasks = Promise.resolve();
 
 		if (prevNode) {
-			var heading = prevNode.parentNode.querySelector('h4'),
-			    prevMap = dom.findClassInstance(prevNode);
+			const heading = prevNode.parentNode.querySelector('h4');
+			let prevMap = dom.findClassInstance(prevNode);
 
 			while (prevMap) {
 				resetTasks = resetTasks
@@ -3018,7 +3611,7 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 
 			if (!this.getPreviousModalMap())
 				prevNode.parentNode
-					.querySelector('div.right > button')
+					.querySelector('div.button-row > button')
 					.firstChild.data = _('Dismiss');
 		}
 		else {
@@ -3028,11 +3621,16 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		return resetTasks;
 	},
 
-	/** @private */
-	handleModalSave: function(modalMap, ev) {
-		var mapNode = this.getActiveModalMap(),
-		    activeMap = dom.findClassInstance(mapNode),
-		    saveTasks = activeMap.save(null, true);
+	/**
+	 * @private
+	 * @param {Node} modalMap
+	 * @param {Event} ev
+	 * @returns {Promise[]}
+	 */
+	handleModalSave(modalMap, ev) {
+		const mapNode = this.getActiveModalMap();
+		let activeMap = dom.findClassInstance(mapNode);
+		let saveTasks = activeMap.save(null, true);
 
 		while (activeMap.parent) {
 			activeMap = activeMap.parent;
@@ -3043,54 +3641,65 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 
 		return saveTasks
 			.then(L.bind(this.handleModalCancel, this, modalMap, ev, true))
-			.catch(function() {});
+			.catch(() => {});
 	},
 
-	/** @private */
-	handleSort: function(ev) {
-		if (!ev.target.matches('th[data-sortable-row]'))
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleSort(ev) {
+		const th = ev.target && ev.target.closest ? ev.target.closest('th[data-sortable-row]') : null;
+		if (!th)
 			return;
 
-		var th = ev.target,
-		    descending = (th.getAttribute('data-sort-direction') == 'desc'),
-		    config_name = this.uciconfig || this.map.config,
-		    index = 0,
-		    list = [];
+		const descending = (th.getAttribute('data-sort-direction') == 'desc');
+		const config_name = this.uciconfig ?? this.map.config;
+		let index = 0;
+		const list = [];
 
-		ev.currentTarget.querySelectorAll('th').forEach(function(other_th, i) {
+		const headerRow = ev.currentTarget;
+		headerRow.querySelectorAll('th').forEach((other_th, i) => {
 			if (other_th !== th)
 				other_th.removeAttribute('data-sort-direction');
 			else
 				index = i;
 		});
 
-		ev.currentTarget.parentNode.querySelectorAll('tr.cbi-section-table-row').forEach(L.bind(function(tr, i) {
-			var sid = tr.getAttribute('data-sid'),
-			    opt = tr.childNodes[index].getAttribute('data-name'),
-			    val = this.cfgvalue(sid, opt);
+		const tableEl = headerRow.closest('table') || headerRow.parentNode;
+		tableEl.querySelectorAll('tr.cbi-section-table-row').forEach(L.bind((tr, i) => {
+			const sid = tr.getAttribute('data-sid');
+			const opt = tr.childNodes[index].getAttribute('data-name');
+			let val = this.cfgvalue(sid, opt);
 
-			tr.querySelectorAll('.flash').forEach(function(n) {
-				n.classList.remove('flash')
+			tr.querySelectorAll('.flash').forEach((n) => {
+				n.classList.remove('flash');
 			});
 
+			val = Array.isArray(val) ? val.join(' ') : val;
+			val = `${val}`; // coerce non-string types to string
 			list.push([
-				ui.Table.prototype.deriveSortKey((val != null) ? val.trim() : ''),
+				ui.Table.prototype.deriveSortKey((val != null && typeof val.trim === 'function') ? val.trim() : ''),
 				tr
 			]);
 		}, this));
 
-		list.sort(function(a, b) {
+		list.sort((a, b) => {
 			return descending
 				? -L.naturalCompare(a[0], b[0])
 				: L.naturalCompare(a[0], b[0]);
 		});
 
-		window.requestAnimationFrame(L.bind(function() {
-			var ref_sid, cur_sid;
+		window.requestAnimationFrame(L.bind(() => {
+			let ref_sid;
+			let cur_sid;
 
-			for (var i = 0; i < list.length; i++) {
+			const tbodyEl = (tableEl.tBodies && tableEl.tBodies[0]) ? tableEl.tBodies[0] : tableEl;
+
+			for (let i = 0; i < list.length; i++) {
 				list[i][1].childNodes[index].classList.add('flash');
-				th.parentNode.parentNode.appendChild(list[i][1]);
+				tbodyEl.appendChild(list[i][1]);
 
 				cur_sid = list[i][1].getAttribute('data-sid');
 
@@ -3107,7 +3716,7 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 	/**
 	 * Add further options to the per-section instanced modal popup.
 	 *
-	 * This function may be overwritten by user code to perform additional
+	 * This function may be overridden by user code to perform additional
 	 * setup steps before displaying the more options modal which is useful to
 	 * e.g. query additional data or to inject further option elements.
 	 *
@@ -3126,40 +3735,50 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 	 * @returns {*|Promise<*>}
 	 * Return values of this function are ignored but if a promise is returned,
 	 * it is run to completion before the rendering is continued, allowing
-	 * custom logic to perform asynchroneous work before the modal dialog
+	 * custom logic to perform asynchronous work before the modal dialog
 	 * is shown.
 	 */
-	addModalOptions: function(modalSection, section_id, ev) {
+	addModalOptions(modalSection, section_id, ev) {
 
 	},
 
-	/** @private */
-	getActiveModalMap: function() {
+	/**
+	 * @private
+	 * @returns {Node[]}
+	 */
+	getActiveModalMap() {
 		return document.querySelector('body.modal-overlay-active > #modal_overlay > .modal.cbi-modal > .cbi-map:not(.hidden)');
 	},
 
-	/** @private */
-	getPreviousModalMap: function() {
-		var mapNode = this.getActiveModalMap(),
-		    prevNode = mapNode ? mapNode.previousElementSibling : null;
+	/**
+	 * @private
+	 * @returns {Node[]|null}
+	 */
+	getPreviousModalMap() {
+		const mapNode = this.getActiveModalMap();
+		const prevNode = mapNode ? mapNode.previousElementSibling : null;
 
 		return (prevNode && prevNode.matches('.cbi-map.hidden')) ? prevNode : null;
 	},
 
-	/** @private */
-	cloneOptions: function(src_section, dest_section) {
-		for (var i = 0; i < src_section.children.length; i++) {
-			var o1 = src_section.children[i];
+	/**
+	 * @private
+	 * @param {string} src_section
+	 * @param {string} dest_section
+	 */
+	cloneOptions(src_section, dest_section) {
+		for (let i = 0; i < src_section.children.length; i++) {
+			const o1 = src_section.children[i];
 
 			if (o1.modalonly === false && src_section === this)
 				continue;
 
-			var o2;
+			let o2;
 
 			if (o1.subsection) {
 				o2 = dest_section.option(o1.constructor, o1.option, o1.subsection.constructor, o1.subsection.sectiontype, o1.subsection.title, o1.subsection.description);
 
-				for (var k in o1.subsection) {
+				for (const k in o1.subsection) {
 					if (!o1.subsection.hasOwnProperty(k))
 						continue;
 
@@ -3180,7 +3799,7 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 				o2 = dest_section.option(o1.constructor, o1.option, o1.title, o1.description);
 			}
 
-			for (var k in o1) {
+			for (const k in o1) {
 				if (!o1.hasOwnProperty(k))
 					continue;
 
@@ -3200,34 +3819,66 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 		}
 	},
 
-	/** @private */
-	renderMoreOptionsModal: function(section_id, ev) {
-		var parent = this.map,
-		    sref = parent.data.get(parent.config, section_id),
-		    mapNode = this.getActiveModalMap(),
-		    activeMap = mapNode ? dom.findClassInstance(mapNode) : null,
-		    stackedMap = activeMap && (activeMap.parent !== parent || activeMap.section !== section_id);
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {Event} ev
+	 * @returns {Promise}
+	 */
+	renderMoreOptionsModal(section_id, ev) {
+		const parent = this.map;
+		const sref = parent.data.get(parent.config, section_id);
+		const mapNode = this.getActiveModalMap();
+		const activeMap = mapNode ? dom.findClassInstance(mapNode) : null;
+		const stackedMap = activeMap && (activeMap.parent !== parent || activeMap.section !== section_id);
 
-		return (stackedMap ? activeMap.save(null, true) : Promise.resolve()).then(L.bind(function() {
+		return (stackedMap ? activeMap.save(null, true) : Promise.resolve()).then(L.bind(() => {
 			section_id = sref['.name'];
 
-			var m = new CBIMap(parent.config, null, null),
-			    s = m.section(CBINamedSection, section_id, this.sectiontype);
+			let m;
+
+			if (parent instanceof CBIJSONMap) {
+				m = new CBIJSONMap(null, null, null);
+				m.data = parent.data;
+			}
+			else {
+				m = new CBIMap(parent.config, null, null);
+			}
+
+			const s = m.section(CBINamedSection, section_id, this.sectiontype);
 
 			m.parent = parent;
 			m.section = section_id;
 			m.readonly = parent.readonly;
 
-			s.tabs = this.tabs;
-			s.tab_names = this.tab_names;
+			/* Clone tabs as both array and object. Otherwise calling renderMoreOptionsModal (reopening
+			the same Modal multiple times) results in errors when s.tab is called in the modal. This
+			allows Modal dialogues that declare new tabs to be opened multiple times without re-creating
+			tabs that 'already exist'. */
+			if (this.tabs) {
+				s.tabs = Array.from(this.tabs);
+				for (const key in this.tabs) {
+					if (Object.prototype.hasOwnProperty.call(this.tabs, key) && isNaN(Number(key))) {
+						s.tabs[key] = this.tabs[key];
+					}
+				}
+			} else {
+				s.tabs = undefined;
+			}
+
+			if (this.tab_names) {
+				s.tab_names = Array.isArray(this.tab_names) ? this.tab_names.slice() : Object.assign({}, this.tab_names);
+			} else {
+				s.tab_names = undefined;
+			}
 
 			this.cloneOptions(this, s);
 
-			return Promise.resolve(this.addModalOptions(s, section_id, ev)).then(function() {
+			return Promise.resolve(this.addModalOptions(s, section_id, ev)).then(() => {
 				return m.render();
-			}).then(L.bind(function(nodes) {
-				var title = parent.title,
-				    name = null;
+			}).then(L.bind((nodes) => {
+				let title = parent.title;
+				let name = null;
 
 				if ((name = this.titleFn('modaltitle', section_id)) != null)
 					title = name;
@@ -3239,11 +3890,11 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 				if (stackedMap) {
 					mapNode.parentNode
 						.querySelector('h4')
-						.appendChild(E('span', title ? ' » ' + title : ''));
+						.appendChild(E('span', title ? ` » ${title}` : ''));
 
 					mapNode.parentNode
-						.querySelector('div.right > button')
-						.firstChild.data = _('Back');
+						.querySelector('div.button-row > button')
+						.firstChild.data = _('Dismiss');
 
 					mapNode.classList.add('hidden');
 					mapNode.parentNode.insertBefore(nodes, mapNode.nextElementSibling);
@@ -3253,13 +3904,13 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
 				else {
 					ui.showModal(title, [
 						nodes,
-						E('div', { 'class': 'right' }, [
+						E('div', { 'class': 'button-row' }, [
 							E('button', {
-								'class': 'cbi-button',
+								'class': 'btn cbi-button',
 								'click': ui.createHandlerFn(this, 'handleModalCancel', m)
 							}, [ _('Dismiss') ]), ' ',
 							E('button', {
-								'class': 'cbi-button cbi-button-positive important',
+								'class': 'btn cbi-button cbi-button-positive important',
 								'click': ui.createHandlerFn(this, 'handleModalSave', m),
 								'disabled': m.readonly || null
 							}, [ _('Save') ])
@@ -3278,7 +3929,7 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
  * @hideconstructor
  * @classdesc
  *
- * The `GridSection` class maps all or - if `filter()` is overwritten - a
+ * The `GridSection` class maps all or - if `filter()` is overridden - a
  * subset of the underlying UCI configuration sections of a given type.
  *
  * A grid section functions similar to a {@link LuCI.form.TableSection} but
@@ -3289,7 +3940,7 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
  *
  * Another important difference is that the table cells show a readonly text
  * preview of the corresponding option elements by default, unless the child
- * option element is explicitely made writable by setting the `editable`
+ * option element is explicitly made writeable by setting the `editable`
  * property to `true`.
  *
  * Additionally, the grid section honours a `modalonly` property of child
@@ -3299,7 +3950,7 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
  * Layout wise, a grid section looks mostly identical to table sections.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [section()]{@link LuCI.form.Map#section}.
  *
  * @param {string} section_type
@@ -3311,7 +3962,7 @@ var CBITableSection = CBITypedSection.extend(/** @lends LuCI.form.TableSection.p
  * @param {string} [description]
  * The description text of the form section element.
  */
-var CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.prototype */ {
+const CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.prototype */ {
 	/**
 	 * Add an option tab to the section.
 	 *
@@ -3321,7 +3972,7 @@ var CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.pro
 	 * Before options can be moved into a tab pane, the corresponding tab
 	 * has to be defined first, which is done by calling this function.
 	 *
-	 * Note that tabs are only effective in modal popups, options added with
+	 * Note that tabs are only effective in modal popups. Options added with
 	 * `option()` will not be assigned to a specific tab and are rendered in
 	 * the table view only.
 	 *
@@ -3334,60 +3985,86 @@ var CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.pro
 	 *
 	 * @param {string} [description]
 	 * An additional description text for the corresponding tab pane. It is
-	 * displayed as text paragraph below the tab but before the tab pane
+	 * displayed as a text paragraph below the tab but before the tab pane
 	 * contents. If omitted, no description will be rendered.
 	 *
 	 * @throws {Error}
-	 * Throws an exeption if a tab with the same `name` already exists.
+	 * Throws an exception if a tab with the same `name` already exists.
 	 */
-	tab: function(name, title, description) {
+	tab(name, title, description) {
 		CBIAbstractSection.prototype.tab.call(this, name, title, description);
 	},
 
-	/** @private */
-	handleAdd: function(ev, name) {
-		var config_name = this.uciconfig || this.map.config,
-		    section_id = this.map.data.add(config_name, this.sectiontype, name),
-		    mapNode = this.getPreviousModalMap(),
-		    prevMap = mapNode ? dom.findClassInstance(mapNode) : this.map;
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @param {string} name
+	 * @returns {Promise}
+	 */
+	handleAdd(ev, name) {
+		const config_name = this.uciconfig ?? this.map.config;
+		const section_id = this.map.data.add(config_name, this.sectiontype, name);
+		const mapNode = this.getPreviousModalMap();
+		const prevMap = mapNode ? dom.findClassInstance(mapNode) : this.map;
 
 		prevMap.addedSection = section_id;
 
 		return this.renderMoreOptionsModal(section_id);
 	},
 
-	/** @private */
-	handleModalSave: function(/* ... */) {
-		var mapNode = this.getPreviousModalMap(),
-		    prevMap = mapNode ? dom.findClassInstance(mapNode) : this.map;
+	/**
+	 * @private
+	 * @param {...*} args
+	 * @returns {*}
+	 */
+	handleModalSave(...args) /* ... */{
+		const mapNode = this.getPreviousModalMap();
+		const prevMap = mapNode ? dom.findClassInstance(mapNode) : this.map;
 
-		return this.super('handleModalSave', arguments);
+		return this.super('handleModalSave', args);
 	},
 
-	/** @private */
-	handleModalCancel: function(modalMap, ev, isSaving) {
-		var config_name = this.uciconfig || this.map.config,
-		    mapNode = this.getPreviousModalMap(),
-		    prevMap = mapNode ? dom.findClassInstance(mapNode) : this.map;
+	/**
+	 * @private
+	 * @param {*} modalMap
+	 * @param {Event} ev
+	 * @param {boolean} isSaving
+	 * @returns {*}
+	 */
+	handleModalCancel(modalMap, ev, isSaving) {
+		const config_name = this.uciconfig ?? this.map.config;
+		const mapNode = this.getPreviousModalMap();
+		const prevMap = mapNode ? dom.findClassInstance(mapNode) : this.map;
 
 		if (prevMap.addedSection != null && !isSaving)
-			this.map.data.remove(config_name, prevMap.addedSection);
+			this.map.data?.remove(config_name, prevMap.addedSection);
 
 		delete prevMap.addedSection;
 
 		return this.super('handleModalCancel', arguments);
 	},
 
-	/** @private */
-	renderUCISection: function(section_id) {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {*}
+	 */
+	renderUCISection(section_id) {
 		return this.renderOptions(null, section_id);
 	},
 
-	/** @private */
-	renderChildren: function(tab_name, section_id, in_table) {
-		var tasks = [], index = 0;
+	/**
+	 * @private
+	 * @param {string} tab_name
+	 * @param {string} section_id
+	 * @param {string} in_table
+	 * @returns {Promise[]}
+	 */
+	renderChildren(tab_name, section_id, in_table) {
+		const tasks = [];
+		let index = 0;
 
-		for (var i = 0, opt; (opt = this.children[i]) != null; i++) {
+		for (let i = 0, opt; (opt = this.children[i]) != null; i++) {
 			if (opt.disable || opt.modalonly)
 				continue;
 
@@ -3400,11 +4077,16 @@ var CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.pro
 		return Promise.all(tasks);
 	},
 
-	/** @private */
-	renderTextValue: function(section_id, opt) {
-		var title = this.stripTags(opt.title).trim(),
-		    descr = this.stripTags(opt.description).trim(),
-		    value = opt.textvalue(section_id);
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {string} opt
+	 * @returns {Node}
+	 */
+	renderTextValue(section_id, opt) {
+		const title = this.stripTags(opt.title).trim();
+		const descr = this.stripTags(opt.description).trim();
+		const value = opt.textvalue(section_id);
 
 		return E('td', {
 			'class': 'td cbi-value-field',
@@ -3415,24 +4097,32 @@ var CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.pro
 		}, (value != null) ? value : E('em', _('none')));
 	},
 
-	/** @private */
-	renderHeaderRows: function(section_id) {
-		return this.super('renderHeaderRows', [ NaN, true ]);
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {Node[]}
+	 */
+	renderHeaderRows(section_id) {
+		return this.super('renderHeaderRows', [ true ]);
 	},
 
-	/** @private */
-	renderRowActions: function(section_id) {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {Node[]}
+	 */
+	renderRowActions(section_id) {
 		return this.super('renderRowActions', [ section_id, _('Edit') ]);
 	},
 
 	/** @override */
-	parse: function() {
-		var section_ids = this.cfgsections(),
-		    tasks = [];
+	parse() {
+		const section_ids = this.cfgsections();
+		const tasks = [];
 
 		if (Array.isArray(this.children)) {
-			for (var i = 0; i < section_ids.length; i++) {
-				for (var j = 0; j < this.children.length; j++) {
+			for (let i = 0; i < section_ids.length; i++) {
+				for (let j = 0; j < this.children.length; j++) {
 					if (!this.children[j].editable || this.children[j].modalonly)
 						continue;
 
@@ -3459,7 +4149,7 @@ var CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.pro
  * `TypedSection` which allows exactly one section node.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added to. It is automatically passed
  * by [section()]{@link LuCI.form.Map#section}.
  *
  * @param {string} section_id
@@ -3474,21 +4164,34 @@ var CBIGridSection = CBITableSection.extend(/** @lends LuCI.form.GridSection.pro
  * @param {string} [description]
  * The description text of the form section element.
  */
-var CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSection.prototype */ {
+const CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSection.prototype */ {
 	__name__: 'CBI.NamedSection',
-	__init__: function(map, section_id /*, ... */) {
-		this.super('__init__', this.varargs(arguments, 2, map));
+	__init__(map, section_id, ...args) {
+		this.super('__init__', [ map, ...args ]);
 
 		this.section = section_id;
 	},
 
 	/**
-	 * If set to `true`, the user may remove or recreate the sole mapped
+	 * Set to `true`, the user may remove or recreate the sole mapped
 	 * configuration instance from the form section widget, otherwise only a
-	 * preexisting section may be edited. The default is `false`.
+	 * pre-existing section may be edited. The default is `false`.
 	 *
-	 * @name LuCI.form.NamedSection.prototype#addremove
-	 * @type boolean
+	 * @memberof LuCI.form.NamedSection
+	 * @member addremove
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * If set to true, the title caption of the form section element which
+	 * is normally rendered before the start of the section content will
+	 * not be rendered in the UI. The default is false, meaning that the
+	 * title is rendered.
+	 *
+	 * @memberof LuCI.form.NamedSection
+	 * @member hidetitle
+	 * @type {boolean}
 	 * @default false
 	 */
 
@@ -3496,56 +4199,71 @@ var CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSectio
 	 * Override the UCI configuration name to read the section IDs from. By
 	 * default, the configuration name is inherited from the parent `Map`.
 	 * By setting this property, a deviating configuration may be specified.
-	 * The default is `null`, means inheriting from the parent form.
+	 * The default of `null` means inherit from the parent form.
 	 *
-	 * @name LuCI.form.NamedSection.prototype#uciconfig
-	 * @type string
+	 * @memberof LuCI.form.NamedSection
+	 * @member uciconfig
+	 * @type {string}
 	 * @default null
 	 */
 
 	/**
-	 * The `NamedSection` class overwrites the generic `cfgsections()`
+	 * The `NamedSection` class overrides the generic `cfgsections()`
 	 * implementation to return a one-element array containing the mapped
-	 * section ID as sole element. User code should not normally change this.
+	 * section ID as a sole element. User code should not normally change this.
 	 *
 	 * @returns {string[]}
 	 * Returns a one-element array containing the mapped section ID.
 	 */
-	cfgsections: function() {
+	cfgsections() {
 		return [ this.section ];
 	},
 
-	/** @private */
-	handleAdd: function(ev) {
-		var section_id = this.section,
-		    config_name = this.uciconfig || this.map.config;
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleAdd(ev) {
+		const section_id = this.section;
+		const config_name = this.uciconfig ?? this.map.config;
 
 		this.map.data.add(config_name, this.sectiontype, section_id);
 		return this.map.save(null, true);
 	},
 
-	/** @private */
-	handleRemove: function(ev) {
-		var section_id = this.section,
-		    config_name = this.uciconfig || this.map.config;
+	/**
+	 * @private
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleRemove(ev) {
+		const section_id = this.section;
+		const config_name = this.uciconfig ?? this.map.config;
 
-		this.map.data.remove(config_name, section_id);
+		this.map.data?.remove(config_name, section_id);
 		return this.map.save(null, true);
 	},
 
-	/** @private */
-	renderContents: function(data) {
-		var ucidata = data[0], nodes = data[1],
-		    section_id = this.section,
-		    config_name = this.uciconfig || this.map.config,
-		    sectionEl = E('div', {
-				'id': ucidata ? null : 'cbi-%s-%s'.format(config_name, section_id),
-				'class': 'cbi-section',
-				'data-tab': (this.map.tabbed && !this.parentoption) ? this.sectiontype : null,
-				'data-tab-title': (this.map.tabbed && !this.parentoption) ? this.title || this.sectiontype : null
-			});
+	/**
+	 * @private
+	 * @param {string[]} data
+	 * @returns {Node}
+	 */
+	renderContents(data) {
+		const ucidata = data[0];
+		const nodes = data[1];
+		const section_id = this.section;
+		const config_name = this.uciconfig ?? this.map.config;
 
-		if (typeof(this.title) === 'string' && this.title !== '')
+		const sectionEl = E('div', {
+			'id': ucidata ? null : 'cbi-%s-%s'.format(config_name, section_id),
+			'class': 'cbi-section',
+			'data-tab': (this.map.tabbed && !this.parentoption) ? this.sectiontype : null,
+			'data-tab-title': (this.map.tabbed && !this.parentoption) ? this.title || this.sectiontype : null
+		});
+
+		if (typeof(this.title) === 'string' && this.title !== '' && !this.hidetitle)
 			sectionEl.appendChild(E('h3', {}, this.title));
 
 		if (typeof(this.description) === 'string' && this.description !== '')
@@ -3553,13 +4271,14 @@ var CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSectio
 
 		if (ucidata) {
 			if (this.addremove) {
+				const rem_btn_title = this.titleFn('delbtntitle', section_id);
 				sectionEl.appendChild(
 					E('div', { 'class': 'cbi-section-remove right' },
 						E('button', {
 							'class': 'cbi-button',
 							'click': ui.createHandlerFn(this, 'handleRemove'),
 							'disabled': this.map.readonly || null
-						}, [ _('Delete') ])));
+						}, [ rem_btn_title ?? _('Delete') ])));
 			}
 
 			sectionEl.appendChild(E('div', {
@@ -3570,12 +4289,13 @@ var CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSectio
 			}, nodes));
 		}
 		else if (this.addremove) {
+			const add_btn_title = this.titleFn('addbtntitle', section_id);
 			sectionEl.appendChild(
 				E('button', {
 					'class': 'cbi-button cbi-button-add',
 					'click': ui.createHandlerFn(this, 'handleAdd'),
 					'disabled': this.map.readonly || null
-				}, [ _('Add') ]));
+				}, [ add_btn_title ?? _('Add') ]));
 		}
 
 		dom.bindClassInstance(sectionEl, this);
@@ -3584,9 +4304,9 @@ var CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSectio
 	},
 
 	/** @override */
-	render: function() {
-		var config_name = this.uciconfig || this.map.config,
-		    section_id = this.section;
+	render() {
+		const config_name = this.uciconfig ?? this.map.config;
+		const section_id = this.section;
 
 		return Promise.all([
 			this.map.data.get(config_name, section_id),
@@ -3607,7 +4327,7 @@ var CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSectio
  * {@link LuCI.ui.Combobox} class as underlying widget.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -3627,23 +4347,25 @@ var CBINamedSection = CBIAbstractSection.extend(/** @lends LuCI.form.NamedSectio
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
+const CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 	__name__: 'CBI.Value',
 
 	/**
-	 * If set to `true`, the field is rendered as password input, otherwise
-	 * as plain text input.
+	 * If set to `true`, the field is rendered as a password input, otherwise
+	 * as a plain text input.
 	 *
-	 * @name LuCI.form.Value.prototype#password
-	 * @type boolean
+	 * @memberof LuCI.form.Value.prototype
+	 * @member password
+	 * @type {boolean}
 	 * @default false
 	 */
 
 	/**
 	 * Set a placeholder string to use when the input field is empty.
 	 *
-	 * @name LuCI.form.Value.prototype#placeholder
-	 * @type string
+	 * @memberof LuCI.form.Value.prototype
+	 * @member placeholder
+	 * @type {string}
 	 * @default null
 	 */
 
@@ -3656,31 +4378,91 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 	 * @param {string} key
 	 * The choice value to add.
 	 *
-	 * @param {Node|string} value
+	 * @param {Node|string} val
 	 * The caption for the choice value. May be a DOM node, a document fragment
-	 * or a plain text string. If omitted, the `key` value is used as caption.
+	 * or a plain text string. If omitted, the `key` value is used as a caption.
 	 */
-	value: function(key, val) {
-		this.keylist = this.keylist || [];
+	value(key, val) {
+		this.keylist ??= [];
 		this.keylist.push(String(key));
 
-		this.vallist = this.vallist || [];
+		this.vallist ??= [];
 		this.vallist.push(dom.elem(val) ? val : String(val != null ? val : key));
 	},
 
+	/**
+	 * Set a tooltip for the option.
+	 *
+	 * Set to a string, it will be used as-is as a tooltip, `%s` is replaced
+	 * by the section ID. Set to a function, the function will be invoked
+	 * with the section ID and the return value will be shown as a tooltip.
+	 * If the return value of the function is `null` no tooltip will be set.
+	 * The value, or the return value of the function, may also be an array,
+	 * its items are then separated by line breaks.
+	 * The tooltip is shown next to the input widget when hovering the icon.
+	 *
+	 * @memberof LuCI.form.Value.prototype
+	 * @member {string|function()} tooltip
+	 * @default null
+	 */
+
+	/**
+	 * Set a tooltip icon for the option.
+	 *
+	 * If set, this icon will be shown instead of the default one.
+	 *
+	 * @memberof LuCI.form.Value.prototype
+	 * @member tooltipicon
+	 * @type {string}
+	 * @default 'ℹ️'
+	 */
+
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {Node|null}
+	 */
+	renderTooltip(section_id) {
+		let tooltip = null;
+
+		if (typeof(this.tooltip) == 'function')
+			tooltip = this.tooltip(section_id);
+		else if (typeof(this.tooltip) == 'string')
+			tooltip = this.tooltip.format(section_id);
+		else if (Array.isArray(this.tooltip))
+			tooltip = this.tooltip;
+
+		if (tooltip == null)
+			return null;
+
+		if (Array.isArray(tooltip))
+			tooltip = tooltip.flatMap((line, i) => i ? [E('br'), line] : [line]);
+
+		return E('span', { 'class': 'cbi-tooltip-container' }, [
+			this.tooltipicon ?? 'ℹ️',
+			E('span', { 'class': 'cbi-tooltip' }, tooltip)
+		]);
+	},
+
 	/** @override */
-	render: function(option_index, section_id, in_table) {
+	render(option_index, section_id, in_table) {
 		return Promise.resolve(this.cfgvalue(section_id))
 			.then(this.renderWidget.bind(this, section_id, option_index))
 			.then(this.renderFrame.bind(this, section_id, in_table, option_index));
 	},
 
-	/** @private */
-	handleValueChange: function(section_id, state, ev) {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {object} state
+	 * @param {Event} ev
+	 * @returns {null}
+	 */
+	handleValueChange(section_id, state, ev) {
 		if (typeof(this.onchange) != 'function')
 			return;
 
-		var value = this.formvalue(section_id);
+		const value = this.formvalue(section_id);
 
 		if (isEqual(value, state.previousValue))
 			return;
@@ -3689,14 +4471,22 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 		this.onchange.call(this, ev, section_id, value);
 	},
 
-	/** @private */
-	renderFrame: function(section_id, in_table, option_index, nodes) {
-		var config_name = this.uciconfig || this.section.uciconfig || this.map.config,
-		    depend_list = this.transformDepList(section_id),
-		    optionEl;
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {string} in_table
+	 * @param {number} option_index
+	 * @param {Node[]} nodes
+	 * @returns {Node}
+	 */
+	renderFrame(section_id, in_table, option_index, nodes) {
+		const config_name = this.uciconfig ?? this.section.uciconfig ?? this.map.config;
+		const depend_list = this.transformDepList(section_id);
+		const tooltipEl = this.renderTooltip(section_id);
+		let optionEl;
 
 		if (in_table) {
-			var title = this.stripTags(this.title).trim();
+			const title = this.stripTags(this.title).trim();
 			optionEl = E('td', {
 				'class': 'td cbi-value-field',
 				'data-title': (title != '') ? title : null,
@@ -3728,9 +4518,9 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 				optionEl.appendChild(E('label', {
 					'class': 'cbi-value-title',
 					'for': 'widget.cbid.%s.%s.%s'.format(config_name, section_id, this.option),
-					'click': function(ev) {
-						var node = ev.currentTarget,
-						    elem = node.nextElementSibling.querySelector('#' + node.getAttribute('for')) || node.nextElementSibling.querySelector('[data-widget-id="' + node.getAttribute('for') + '"]');
+					'click': (ev) => {
+						const node = ev.currentTarget;
+						const elem = node.nextElementSibling.querySelector(`#${node.getAttribute('for')}`) ?? node.nextElementSibling.querySelector(`[data-widget-id="${node.getAttribute('for')}"]`);
 
 						if (elem) {
 							elem.click();
@@ -3741,22 +4531,34 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 				this.titleref ? E('a', {
 					'class': 'cbi-title-ref',
 					'href': this.titleref,
-					'title': this.titledesc || _('Go to relevant configuration page')
+					'title': this.titledesc ?? _('Go to relevant configuration page')
 				}, this.title) : this.title));
 
 				optionEl.appendChild(E('div', { 'class': 'cbi-value-field' }));
 			}
 		}
 
+		/* Keep the tooltip icon always behind the widget, independent of
+		 * whether the widget frame is a block or an inline element. */
+		if (tooltipEl && nodes)
+			nodes = E('div', {
+				'style': 'display:inline-flex; align-items:center; gap:.5em; max-width:100%'
+			}, [ nodes, tooltipEl ]);
+		else if (tooltipEl)
+			nodes = tooltipEl;
+
 		if (nodes)
-			(optionEl.lastChild || optionEl).appendChild(nodes);
+			(optionEl.lastChild ?? optionEl).appendChild(nodes);
 
 		if (!in_table && typeof(this.description) === 'string' && this.description !== '')
-			dom.append(optionEl.lastChild || optionEl,
+			dom.append(optionEl.lastChild ?? optionEl,
 				E('div', { 'class': 'cbi-value-description' }, this.description.trim()));
 
 		if (depend_list && depend_list.length)
-			optionEl.classList.add('hidden');
+			if (in_table)
+				optionEl.firstChild.classList.add('hidden');
+			else
+				optionEl.classList.add('hidden');
 
 		optionEl.addEventListener('widget-change',
 			L.bind(this.map.checkDepends, this.map));
@@ -3769,14 +4571,20 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 		return optionEl;
 	},
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var value = (cfgvalue != null) ? cfgvalue : this.default,
-		    choices = this.transformChoices(),
-		    widget;
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const value = (cfgvalue != null) ? cfgvalue : this.default;
+		const choices = this.transformChoices();
+		let widget;
 
 		if (choices) {
-			var placeholder = (this.optional || this.rmempty)
+			const placeholder = (this.optional || this.rmempty)
 				? E('em', _('unspecified')) : _('-- Please choose --');
 
 			widget = new ui.Combobox(Array.isArray(value) ? value.join(' ') : value, choices, {
@@ -3784,8 +4592,8 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 				sort: this.keylist,
 				optional: this.optional || this.rmempty,
 				datatype: this.datatype,
-				select_placeholder: this.placeholder || placeholder,
-				validate: L.bind(this.validate, this, section_id),
+				select_placeholder: this.placeholder ?? placeholder,
+				validate: this.getValidator(section_id),
 				disabled: (this.readonly != null) ? this.readonly : this.map.readonly
 			});
 		}
@@ -3796,7 +4604,7 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
 				optional: this.optional || this.rmempty,
 				datatype: this.datatype,
 				placeholder: this.placeholder,
-				validate: L.bind(this.validate, this, section_id),
+				validate: this.getValidator(section_id),
 				disabled: (this.readonly != null) ? this.readonly : this.map.readonly
 			});
 		}
@@ -3812,18 +4620,18 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
  * @hideconstructor
  * @classdesc
  *
- * The `DynamicList` class represents a multi value widget allowing the user
+ * The `DynamicList` class represents a multi-value widget allowing the user
  * to enter multiple unique values, optionally selected from a set of
  * predefined choices. It builds upon the {@link LuCI.ui.DynamicList} widget.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
  *
  * @param {LuCI.form.AbstractSection} section
- * The configuration section this option is added to. It is automatically passed
+ * The configuration section to which this option is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -3837,22 +4645,41 @@ var CBIValue = CBIAbstractValue.extend(/** @lends LuCI.form.Value.prototype */ {
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIDynamicList = CBIValue.extend(/** @lends LuCI.form.DynamicList.prototype */ {
+const CBIDynamicList = CBIValue.extend(/** @lends LuCI.form.DynamicList.prototype */ {
 	__name__: 'CBI.DynamicList',
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var value = (cfgvalue != null) ? cfgvalue : this.default,
-		    choices = this.transformChoices(),
-		    items = L.toArray(value);
+	/**
+	 * Allows the underlying form controls to have multiple identical values.
+	 *
+	 * Default is `null`. If `true`, the underlying form value will
+	 * not be checked for duplication.
+	 *
+	 * @memberof LuCI.form.DynamicList.prototype
+	 * @member allowduplicates
+	 * @type {boolean}
+	 * @default null
+	 */
 
-		var widget = new ui.DynamicList(items, choices, {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const value = (cfgvalue != null) ? cfgvalue : this.default;
+		const choices = this.transformChoices();
+		const items = L.toArray(value);
+
+		const widget = new ui.DynamicList(items, choices, {
 			id: this.cbid(section_id),
 			sort: this.keylist,
+			allowduplicates: this.allowduplicates,
 			optional: this.optional || this.rmempty,
 			datatype: this.datatype,
 			placeholder: this.placeholder,
-			validate: L.bind(this.validate, this, section_id),
+			validate: this.getValidator(section_id),
 			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
 		});
 
@@ -3868,11 +4695,11 @@ var CBIDynamicList = CBIValue.extend(/** @lends LuCI.form.DynamicList.prototype 
  * @classdesc
  *
  * The `ListValue` class implements a simple static HTML select element
- * allowing the user to chose a single value from a set of predefined choices.
+ * allowing the user to choose a single value from a set of predefined choices.
  * It builds upon the {@link LuCI.ui.Select} widget.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added to. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -3892,11 +4719,11 @@ var CBIDynamicList = CBIValue.extend(/** @lends LuCI.form.DynamicList.prototype 
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
+const CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
 	__name__: 'CBI.ListValue',
 
-	__init__: function() {
-		this.super('__init__', arguments);
+	__init__(...args) {
+		this.super('__init__', args);
 		this.widget = 'select';
 		this.orientation = 'horizontal';
 		this.deplist = [];
@@ -3905,8 +4732,9 @@ var CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
 	/**
 	 * Set the size attribute of the underlying HTML select element.
 	 *
-	 * @name LuCI.form.ListValue.prototype#size
-	 * @type number
+	 * @memberof LuCI.form.ListValue.prototype
+	 * @member size
+	 * @type {number}
 	 * @default null
 	 */
 
@@ -3917,8 +4745,9 @@ var CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
 	 * select element is rendered, otherwise a collection of `radio`
 	 * elements is used.
 	 *
-	 * @name LuCI.form.ListValue.prototype#widget
-	 * @type string
+	 * @memberof LuCI.form.ListValue.prototype
+	 * @member widget
+	 * @type {string}
 	 * @default select
 	 */
 
@@ -3928,15 +4757,22 @@ var CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
 	 * May be one of `horizontal` or `vertical`. Only applies to non-select
 	 * widget types.
 	 *
-	 * @name LuCI.form.ListValue.prototype#orientation
-	 * @type string
+	 * @memberof LuCI.form.ListValue.prototype
+	 * @member orientation
+	 * @type {string}
 	 * @default horizontal
 	 */
 
-	 /** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var choices = this.transformChoices();
-		var widget = new ui.Select((cfgvalue != null) ? cfgvalue : this.default, choices, {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const choices = this.transformChoices();
+		const widget = new ui.Select((cfgvalue != null) ? cfgvalue : this.default, choices, {
 			id: this.cbid(section_id),
 			size: this.size,
 			sort: this.keylist,
@@ -3944,7 +4780,7 @@ var CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
 			optional: this.optional,
 			orientation: this.orientation,
 			placeholder: this.placeholder,
-			validate: L.bind(this.validate, this, section_id),
+			validate: this.getValidator(section_id),
 			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
 		});
 
@@ -3953,23 +4789,25 @@ var CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
 });
 
 /**
- * @class FlagValue
+ * @class RichListValue
  * @memberof LuCI.form
- * @augments LuCI.form.Value
+ * @augments LuCI.form.ListValue
  * @hideconstructor
  * @classdesc
  *
- * The `FlagValue` element builds upon the {@link LuCI.ui.Checkbox} widget to
- * implement a simple checkbox element.
+ * The `RichListValue` class implements a simple static HTML select element
+ * allowing the user to choose a single value from a set of predefined choices.
+ * Each choice may contain a tertiary, more elaborate description.
+ * It builds upon the {@link LuCI.form.ListValue} widget.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
  *
  * @param {LuCI.form.AbstractSection} section
- * The configuration section this option is added to. It is automatically passed
+ * The configuration section to which this option is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -3983,11 +4821,288 @@ var CBIListValue = CBIValue.extend(/** @lends LuCI.form.ListValue.prototype */ {
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.FlagValue.prototype */ {
+const CBIRichListValue = CBIListValue.extend(/** @lends LuCI.form.RichListValue.prototype */ {
+	__name__: 'CBI.RichListValue',
+
+	__init__() {
+		this.super('__init__', arguments);
+		this.widget = 'select';
+		this.orientation = 'horizontal';
+		this.deplist = [];
+	},
+
+	/**
+	 * Set the orientation of the underlying radio or checkbox elements.
+	 *
+	 * May be one of `horizontal` or `vertical`. Only applies to non-select
+	 * widget types.
+	 *
+	 * @memberof LuCI.form.RichListValue.prototype
+	 * @member orientation
+	 * @type {string}
+	 * @default horizontal
+	 */
+
+	/**
+	 * Set the size attribute of the underlying HTML select element.
+	 *
+	 * @memberof LuCI.form.RichListValue.prototype
+	 * @member size
+	 * @type {number}
+	 * @default null
+	 */
+
+	/**
+	 * Set the type of the underlying form controls.
+	 *
+	 * May be one of `select` or `radio`. If set to `select`, an HTML
+	 * select element is rendered, otherwise a collection of `radio`
+	 * elements is used.
+	 *
+	 * @memberof LuCI.form.RichListValue.prototype
+	 * @member widget
+	 * @type {string}
+	 * @default select
+	 */
+
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const choices = this.transformChoices();
+		const widget = new ui.Dropdown((cfgvalue != null) ? cfgvalue : this.default, choices, {
+			id: this.cbid(section_id),
+			size: this.size,
+			sort: this.keylist,
+			widget: this.widget,
+			multiple: this.multiple,
+			optional: this.optional,
+			orientation: this.orientation,
+			select_placeholder: this.select_placeholder || this.placeholder,
+			custom_placeholder: this.custom_placeholder || this.placeholder,
+			validate: this.getValidator(section_id),
+			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
+		});
+
+		return widget.render();
+	},
+
+	/**
+	 * Add a predefined choice to the form option. By adding one or more
+	 * choices, the plain text input field is turned into a combobox widget
+	 * which prompts the user to select a predefined choice, or to enter a
+	 * custom value.
+	 *
+	 * @param {string} value
+	 * The choice value to add.
+	 *
+	 * @param {Node|string} title
+	 * The caption for the choice value. May be a DOM node, a document fragment
+	 * or a plain text string. If omitted, the `key` value is used as caption.
+	 * 
+	 * @param {Node|string} description
+	 * The description text of the choice value. May be a DOM node, a document
+	 * fragment or a plain text string. If omitted, the value element is
+	 * implemented as a simple ListValue entry.
+	 * 
+	 */
+	value(value, title, description) {
+		if (description) {
+			CBIListValue.prototype.value.call(this, value, E([], [
+				E('span', { 'class': 'hide-open' }, [ title ]),
+				E('div', { 'class': 'hide-close', 'style': 'min-width:25vw' }, [
+					E('strong', [ title ]),
+					E('br'),
+					E('span', { 'style': 'white-space:normal' }, description)
+				])
+			]));
+		}
+		else {
+			CBIListValue.prototype.value.call(this, value, title);
+		}
+	}
+});
+
+/**
+ * @class RangeSliderValue
+ * @memberof LuCI.form
+ * @augments LuCI.form.Value
+ * @hideconstructor
+ * @classdesc
+ *
+ * The `RangeSliderValue` class implements a range slider input using
+ * {@link LuCI.ui.RangeSlider}. It is useful in cases where a value shall fall
+ * within a predetermined range. This helps omit various error checks for such
+ * values. The currently chosen value is displayed to the side of the slider.
+ *
+ * @param {LuCI.form.Map|LuCI.form.JSONMap} form
+ * The configuration form to which this section is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {LuCI.form.AbstractSection} section
+ * The configuration section to which this option is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {string} option
+ * The name of the UCI option to map.
+ *
+ * @param {string} [title]
+ * The title caption of the option element.
+ *
+ * @param {string} [description]
+ * The description text of the option element.
+ */
+const CBIRangeSliderValue = CBIValue.extend(/** @lends LuCI.form.RangeSliderValue.prototype */ {
+	__name__: 'CBI.RangeSliderValue',
+
+	/**
+	 * Minimum value the slider can represent.
+	 * @memberof LuCI.form.RangeSliderValue.prototype
+	 * @member min
+	 * @type {number}
+	 * @default 0
+	 */
+
+	/**
+	 * Maximum value the slider can represent.
+	 * @memberof LuCI.form.RangeSliderValue.prototype
+	 * @member max
+	 * @type {number}
+	 * @default 100
+	 */
+
+	/**
+	 * Step size for each tick of the slider, or the special value "any" when
+	 * handling arbitrary precision floating point numbers.
+	 * @memberof LuCI.form.RangeSliderValue.prototype
+	 * @member step
+	 * @type {string}
+	 * @default 1
+	 */
+
+	/**
+	 * Set the default value for the slider. The default value is elided during
+	 * save: meaning, a currently chosen value which matches the default is
+	 * not saved.
+	 * @memberof LuCI.form.RangeSliderValue.prototype
+	 * @member default
+	 * @type {string}
+	 * @default null
+	 */
+
+	/**
+	 * Override the calculate action.
+	 *
+	 * When this property is set to a function, it is invoked when the slider
+	 * is adjusted. This might be useful to calculate and display a result which
+	 * is more meaningful than the currently chosen value. The calculated value
+	 * is displayed below the slider.
+	 *
+	 * @memberof LuCI.form.RangeSliderValue.prototype
+	 * @member calculate
+	 * @type {function()}
+	 * @default null
+	 */
+
+	/**
+	 * Define the units of the calculated value.
+	 *
+	 * Suffix a unit string to the calculated value, e.g. 'seconds' or 'dBm'.
+	 *
+	 * @memberof LuCI.form.RangeSliderValue.prototype
+	 * @member calcunits
+	 * @type {string}
+	 * @default null
+	 */
+
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const slider = new ui.RangeSlider((cfgvalue != null) ? cfgvalue : this.default, {
+			id: this.cbid(section_id),
+			name: this.cbid(section_id),
+			min: this.min,
+			max: this.max,
+			step: this.step,
+			calculate: this.calculate,
+			calcunits: this.calcunits,
+			disabled: this.readonly || this.disabled,
+			datatype: this.datatype,
+			validate: this.getValidator(section_id),
+		});
+
+		this.widget = slider;
+
+		return slider.render();
+	},
+
+	/**
+	 * Query the current form input value.
+	 *
+	 * @param {string} section_id
+	 * The configuration section ID
+	 *
+	 * @returns {*}
+	 * Returns the currently selected value if it does not match the default.
+	 * If the currently selected value matches the default value, returns null.
+	 */
+	formvalue(section_id) {
+		const elem = this.getUIElement(section_id);
+		if (!elem) return null;
+		const val = elem.getValue().toString();
+		return (val === this.default?.toString()) ? null : val;
+	}
+});
+
+/**
+ * @class Flag
+ * @memberof LuCI.form
+ * @augments LuCI.form.Value
+ * @hideconstructor
+ * @classdesc
+ *
+ * The `Flag` element builds upon the {@link LuCI.ui.Checkbox} widget to
+ * implement a simple checkbox element.
+ *
+ * @param {LuCI.form.Map|LuCI.form.JSONMap} form
+ * The configuration form to which this section is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {LuCI.form.AbstractSection} section
+ * The configuration section to which this option is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {string} option
+ * The name of the UCI option to map.
+ *
+ * @param {string} [title]
+ * The title caption of the option element.
+ *
+ * @param {string} [description]
+ * The description text of the option element.
+ */
+const CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.Flag.prototype */ {
 	__name__: 'CBI.FlagValue',
 
-	__init__: function() {
-		this.super('__init__', arguments);
+	__init__(...args) {
+		this.super('__init__', args);
 
 		this.enabled = '1';
 		this.disabled = '0';
@@ -3997,60 +5112,34 @@ var CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.FlagValue.prototype */ {
 	/**
 	 * Sets the input value to use for the checkbox checked state.
 	 *
-	 * @name LuCI.form.FlagValue.prototype#enabled
-	 * @type number
+	 * @memberof LuCI.form.Flag.prototype
+	 * @member enabled
+	 * @type {string}
 	 * @default 1
 	 */
 
 	/**
 	 * Sets the input value to use for the checkbox unchecked state.
 	 *
-	 * @name LuCI.form.FlagValue.prototype#disabled
-	 * @type number
+	 * @memberof LuCI.form.Flag.prototype
+	 * @member disabled
+	 * @type {string}
 	 * @default 0
 	 */
 
 	/**
-	 * Set a tooltip for the flag option.
-	 *
-	 * If set to a string, it will be used as-is as a tooltip.
-	 *
-	 * If set to a function, the function will be invoked and the return
-	 * value will be shown as a tooltip. If the return value of the function
-	 * is `null` no tooltip will be set.
-	 *
-	 * @name LuCI.form.TypedSection.prototype#tooltip
-	 * @type string|function
-	 * @default null
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
 	 */
-
-	/**
-	 * Set a tooltip icon.
-	 *
-	 * If set, this icon will be shown for the default one.
-	 * This could also be a png icon from the resources directory.
-	 *
-	 * @name LuCI.form.TypedSection.prototype#tooltipicon
-	 * @type string
-	 * @default 'ℹ️';
-	 */
-
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var tooltip = null;
-
-		if (typeof(this.tooltip) == 'function')
-			tooltip = this.tooltip.apply(this, [section_id]);
-		else if (typeof(this.tooltip) == 'string')
-			tooltip = (arguments.length > 1) ? ''.format.apply(this.tooltip, this.varargs(arguments, 1)) : this.tooltip;
-
-		var widget = new ui.Checkbox((cfgvalue != null) ? cfgvalue : this.default, {
+	renderWidget(section_id, option_index, cfgvalue) {
+		const widget = new ui.Checkbox((cfgvalue != null) ? cfgvalue : this.default, {
 			id: this.cbid(section_id),
 			value_enabled: this.enabled,
 			value_disabled: this.disabled,
-			validate: L.bind(this.validate, this, section_id),
-			tooltip: tooltip,
-			tooltipicon: this.tooltipicon,
+			validate: this.getValidator(section_id),
 			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
 		});
 
@@ -4064,9 +5153,9 @@ var CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.FlagValue.prototype */ {
 	 *
 	 * @override
 	 */
-	formvalue: function(section_id) {
-		var elem = this.getUIElement(section_id),
-		    checked = elem ? elem.isChecked() : false;
+	formvalue(section_id) {
+		const elem = this.getUIElement(section_id);
+		const checked = elem ? elem.isChecked() : false;
 		return checked ? this.enabled : this.disabled;
 	},
 
@@ -4076,8 +5165,8 @@ var CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.FlagValue.prototype */ {
 	 *
 	 * @override
 	 */
-	textvalue: function(section_id) {
-		var cval = this.cfgvalue(section_id);
+	textvalue(section_id) {
+		let cval = this.cfgvalue(section_id);
 
 		if (cval == null)
 			cval = this.default;
@@ -4086,15 +5175,16 @@ var CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.FlagValue.prototype */ {
 	},
 
 	/** @override */
-	parse: function(section_id) {
+	parse(section_id) {
 		if (this.isActive(section_id)) {
-			var fval = this.formvalue(section_id);
+			const fval = this.formvalue(section_id);
 
 			if (!this.isValid(section_id)) {
-				var title = this.stripTags(this.title).trim();
-				var error = this.getValidationError(section_id);
+				const title = this.stripTags(this.title).trim();
+				const error = this.getValidationError(section_id);
+
 				return Promise.reject(new TypeError(
-					_('Option "%s" contains an invalid input value.').format(title || this.option) + ' ' + error));
+					`${_('Option "%s" contains an invalid input value.').format(title || this.option)} ${error}`));
 			}
 
 			if (fval == this.default && (this.optional || this.rmempty))
@@ -4120,13 +5210,13 @@ var CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.FlagValue.prototype */ {
  * select dropdown element.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
  *
  * @param {LuCI.form.AbstractSection} section
- * The configuration section this option is added to. It is automatically passed
+ * The configuration section to which this option is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -4140,48 +5230,66 @@ var CBIFlagValue = CBIValue.extend(/** @lends LuCI.form.FlagValue.prototype */ {
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIMultiValue = CBIDynamicList.extend(/** @lends LuCI.form.MultiValue.prototype */ {
+const CBIMultiValue = CBIDynamicList.extend(/** @lends LuCI.form.MultiValue.prototype */ {
 	__name__: 'CBI.MultiValue',
 
-	__init__: function() {
-		this.super('__init__', arguments);
+	__init__(...args) {
+		this.super('__init__', args);
 		this.placeholder = _('-- Please choose --');
 	},
 
 	/**
-	 * Allows to specify the [display_items]{@link LuCI.ui.Dropdown.InitOptions}
-	 * property of the underlying dropdown widget. If omitted, the value of
-	 * the `size` property is used or `3` when `size` is unspecified as well.
+	 * Allows custom value entry in addition to those already specified.
 	 *
-	 * @name LuCI.form.MultiValue.prototype#display_size
-	 * @type number
+	 * @memberof LuCI.form.MultiValue.prototype
+	 * @member create
+	 * @type {boolean}
 	 * @default null
 	 */
 
 	/**
-	 * Allows to specify the [dropdown_items]{@link LuCI.ui.Dropdown.InitOptions}
+	 * Allows specifying the [display_items]{@link LuCI.ui.Dropdown.InitOptions}
 	 * property of the underlying dropdown widget. If omitted, the value of
-	 * the `size` property is used or `-1` when `size` is unspecified as well.
+	 * the `size` property is used or `3` when `size` is also unspecified.
 	 *
-	 * @name LuCI.form.MultiValue.prototype#dropdown_size
-	 * @type number
+	 * @memberof LuCI.form.MultiValue.prototype
+	 * @member display_size
+	 * @type {number}
 	 * @default null
 	 */
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var value = (cfgvalue != null) ? cfgvalue : this.default,
-		    choices = this.transformChoices();
+	/**
+	 * Allows specifying the [dropdown_items]{@link LuCI.ui.Dropdown.InitOptions}
+	 * property of the underlying dropdown widget. If omitted, the value of
+	 * the `size` property is used or `-1` when `size` is also unspecified.
+	 *
+	 * @memberof LuCI.form.MultiValue.prototype
+	 * @member dropdown_size
+	 * @type {number}
+	 * @default null
+	 */
 
-		var widget = new ui.Dropdown(L.toArray(value), choices, {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const value = (cfgvalue != null) ? cfgvalue : this.default;
+		const choices = this.transformChoices();
+
+		const widget = new ui.Dropdown(L.toArray(value), choices, {
 			id: this.cbid(section_id),
 			sort: this.keylist,
 			multiple: true,
 			optional: this.optional || this.rmempty,
 			select_placeholder: this.placeholder,
-			display_items: this.display_size || this.size || 3,
-			dropdown_items: this.dropdown_size || this.size || -1,
-			validate: L.bind(this.validate, this, section_id),
+			create: this.create,		
+			display_items: this.display_size ?? this.size ?? 3,
+			dropdown_items: this.dropdown_size ?? this.size ?? -1,
+			validate: this.getValidator(section_id),
 			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
 		});
 
@@ -4200,13 +5308,13 @@ var CBIMultiValue = CBIDynamicList.extend(/** @lends LuCI.form.MultiValue.protot
  * {@link LuCI.ui.Textarea}.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
  *
  * @param {LuCI.form.AbstractSection} section
- * The configuration section this option is added to. It is automatically passed
+ * The configuration section to which this option is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -4220,7 +5328,7 @@ var CBIMultiValue = CBIDynamicList.extend(/** @lends LuCI.form.MultiValue.protot
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBITextValue = CBIValue.extend(/** @lends LuCI.form.TextValue.prototype */ {
+const CBITextValue = CBIValue.extend(/** @lends LuCI.form.TextValue.prototype */ {
 	__name__: 'CBI.TextValue',
 
 	/** @ignore */
@@ -4230,43 +5338,53 @@ var CBITextValue = CBIValue.extend(/** @lends LuCI.form.TextValue.prototype */ {
 	 * Enforces the use of a monospace font for the textarea contents when set
 	 * to `true`.
 	 *
-	 * @name LuCI.form.TextValue.prototype#monospace
-	 * @type boolean
+	 * @memberof LuCI.form.TextValue.prototype
+	 * @member monospace
+	 * @type {boolean}
 	 * @default false
 	 */
 
 	/**
-	 * Allows to specify the [cols]{@link LuCI.ui.Textarea.InitOptions}
+	 * Allows specifying the [cols]{@link LuCI.ui.Textarea.InitOptions}
 	 * property of the underlying textarea widget.
 	 *
-	 * @name LuCI.form.TextValue.prototype#cols
-	 * @type number
+	 * @memberof LuCI.form.TextValue.prototype
+	 * @member cols
+	 * @type {number}
 	 * @default null
 	 */
 
 	/**
-	 * Allows to specify the [rows]{@link LuCI.ui.Textarea.InitOptions}
+	 * Allows specifying the [rows]{@link LuCI.ui.Textarea.InitOptions}
 	 * property of the underlying textarea widget.
 	 *
-	 * @name LuCI.form.TextValue.prototype#rows
-	 * @type number
+	 * @memberof LuCI.form.TextValue.prototype
+	 * @member rows
+	 * @type {number}
 	 * @default null
 	 */
 
 	/**
-	 * Allows to specify the [wrap]{@link LuCI.ui.Textarea.InitOptions}
+	 * Allows specifying the [wrap]{@link LuCI.ui.Textarea.InitOptions}
 	 * property of the underlying textarea widget.
 	 *
-	 * @name LuCI.form.TextValue.prototype#wrap
-	 * @type number
+	 * @memberof LuCI.form.TextValue.prototype
+	 * @member wrap
+	 * @type {number}
 	 * @default null
 	 */
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var value = (cfgvalue != null) ? cfgvalue : this.default;
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const value = (cfgvalue != null) ? cfgvalue : this.default;
 
-		var widget = new ui.Textarea(value, {
+		const widget = new ui.Textarea(value, {
 			id: this.cbid(section_id),
 			optional: this.optional || this.rmempty,
 			placeholder: this.placeholder,
@@ -4274,8 +5392,9 @@ var CBITextValue = CBIValue.extend(/** @lends LuCI.form.TextValue.prototype */ {
 			cols: this.cols,
 			rows: this.rows,
 			wrap: this.wrap,
-			validate: L.bind(this.validate, this, section_id),
-			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
+			validate: this.getValidator(section_id),
+			readonly: (this.readonly != null) ? this.readonly : this.map.readonly,
+			disabled: (this.disabled != null) ? this.disabled : null,
 		});
 
 		return widget.render();
@@ -4289,17 +5408,17 @@ var CBITextValue = CBIValue.extend(/** @lends LuCI.form.TextValue.prototype */ {
  * @hideconstructor
  * @classdesc
  *
- * The `DummyValue` element wraps an {@link LuCI.ui.Hiddenfield} widget and
+ * The `DummyValue` element wraps a {@link LuCI.ui.Hiddenfield} widget and
  * renders the underlying UCI option or default value as readonly text.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
  *
  * @param {LuCI.form.AbstractSection} section
- * The configuration section this option is added to. It is automatically passed
+ * The configuration section to which this option is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -4313,17 +5432,18 @@ var CBITextValue = CBIValue.extend(/** @lends LuCI.form.TextValue.prototype */ {
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIDummyValue = CBIValue.extend(/** @lends LuCI.form.DummyValue.prototype */ {
+const CBIDummyValue = CBIValue.extend(/** @lends LuCI.form.DummyValue.prototype */ {
 	__name__: 'CBI.DummyValue',
 
 	/**
-	 * Set an URL which is opened when clicking on the dummy value text.
+	 * Set a URL which is opened when clicking on the dummy value text.
 	 *
 	 * By setting this property, the dummy value text is wrapped in an `<a>`
 	 * element with the property value used as `href` attribute.
 	 *
-	 * @name LuCI.form.DummyValue.prototype#href
-	 * @type string
+	 * @memberof LuCI.form.DummyValue.prototype
+	 * @member href
+	 * @type {string}
 	 * @default null
 	 */
 
@@ -4331,34 +5451,44 @@ var CBIDummyValue = CBIValue.extend(/** @lends LuCI.form.DummyValue.prototype */
 	 * Treat the UCI option value (or the `default` property value) as HTML.
 	 *
 	 * By default, the value text is HTML escaped before being rendered as
-	 * text. In some cases it may be needed to actually interpret and render
-	 * HTML contents as-is. When set to `true`, HTML escaping is disabled.
+	 * text. In some cases, HTML content may need to be interpreted and
+	 * rendered as-is. When set to `true`, HTML escaping is disabled.
 	 *
-	 * @name LuCI.form.DummyValue.prototype#rawhtml
-	 * @type boolean
+	 * @memberof LuCI.form.DummyValue.prototype
+	 * @member rawhtml
+	 * @type {boolean}
 	 * @default null
 	 */
 
-    /**
-	 * Render the UCI option value as hidden using the HTML display: none style property.
+	/**
+	 * Render the UCI option value as hidden using the HTML 'display: none'
+	 * style property.
 	 *
-	 * By default, the value is displayed
+	 * By default, the value is displayed.
 	 *
-	 * @name LuCI.form.DummyValue.prototype#hidden
-	 * @type boolean
+	 * @memberof LuCI.form.DummyValue.prototype
+	 * @member hidden
+	 * @type {boolean}
 	 * @default null
 	 */
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var value = (cfgvalue != null) ? cfgvalue : this.default,
-		    hiddenEl = new ui.Hiddenfield(value, { id: this.cbid(section_id) }),
-		    outputEl = E('div', { 'style': this.hidden ? 'display:none' : null });
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const value = (cfgvalue != null) ? cfgvalue : this.default;
+		const hiddenEl = new ui.Hiddenfield(value, { id: this.cbid(section_id) });
+		const outputEl = E('output', { 'style': this.hidden ? 'display:none' : null,
+			'for': this.cbid(section_id)});
 
 		if (this.href && !((this.readonly != null) ? this.readonly : this.map.readonly))
 			outputEl.appendChild(E('a', { 'href': this.href }));
 
-		dom.append(outputEl.lastChild || outputEl,
+		dom.append(outputEl.lastChild ?? outputEl,
 			this.rawhtml ? value : [ value ]);
 
 		return E([
@@ -4368,24 +5498,24 @@ var CBIDummyValue = CBIValue.extend(/** @lends LuCI.form.DummyValue.prototype */
 	},
 
 	/** @override */
-	remove: function() {},
+	remove() {},
 
 	/** @override */
-	write: function() {}
+	write() {}
 });
 
 /**
- * @class ButtonValue
+ * @class Button
  * @memberof LuCI.form
  * @augments LuCI.form.Value
  * @hideconstructor
  * @classdesc
  *
- * The `DummyValue` element wraps an {@link LuCI.ui.Hiddenfield} widget and
+ * The `Button` element wraps a {@link LuCI.ui.Hiddenfield} widget and
  * renders the underlying UCI option or default value as readonly text.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added to. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -4405,24 +5535,25 @@ var CBIDummyValue = CBIValue.extend(/** @lends LuCI.form.DummyValue.prototype */
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIButtonValue = CBIValue.extend(/** @lends LuCI.form.ButtonValue.prototype */ {
+const CBIButtonValue = CBIValue.extend(/** @lends LuCI.form.Button.prototype */ {
 	__name__: 'CBI.ButtonValue',
 
 	/**
 	 * Override the rendered button caption.
 	 *
-	 * By default, the option title - which is passed as fourth argument to the
-	 * constructor - is used as caption for the button element. When setting
-	 * this property to a string, it is used as `String.format()` pattern with
-	 * the underlying UCI section name passed as first format argument. When
-	 * set to a function, it is invoked passing the section ID as sole argument
+	 * By default, the option title - which is passed as the fourth argument to the
+	 * constructor - is used as a caption for the button element. When setting
+	 * this property to a string, it is used as a `String.format()` pattern with
+	 * the underlying UCI section name passed as the first format argument. When
+	 * set to a function, it is invoked passing the section ID as the sole argument,
 	 * and the resulting return value is converted to a string before being
-	 * used as button caption.
+	 * used as a button caption.
 	 *
-	 * The default is `null`, means the option title is used as caption.
+	 * The default of `null` means the option title is used as caption.
 	 *
-	 * @name LuCI.form.ButtonValue.prototype#inputtitle
-	 * @type string|function
+	 * @memberof LuCI.form.Button.prototype
+	 * @member inputtitle
+	 * @type {string|function()}
 	 * @default null
 	 */
 
@@ -4435,10 +5566,11 @@ var CBIButtonValue = CBIValue.extend(/** @lends LuCI.form.ButtonValue.prototype 
 	 * Suitable values which are implemented by most themes are `positive`,
 	 * `negative` and `primary`.
 	 *
-	 * The default is `null`, means a neutral button styling is used.
+	 * The default of `null` means a neutral button styling is used.
 	 *
-	 * @name LuCI.form.ButtonValue.prototype#inputstyle
-	 * @type string
+	 * @memberof LuCI.form.Button.prototype
+	 * @member inputstyle
+	 * @type {string}
 	 * @default null
 	 */
 
@@ -4451,33 +5583,40 @@ var CBIButtonValue = CBIValue.extend(/** @lends LuCI.form.ButtonValue.prototype 
 	 *
 	 * When this property is set to a function, it is invoked instead of
 	 * performing the default actions. The handler function will receive the
-	 * DOM click element as first and the underlying configuration section ID
-	 * as second argument.
+	 * DOM click element as the first and the underlying configuration section ID
+	 * as the second argument.
 	 *
-	 * @name LuCI.form.ButtonValue.prototype#onclick
-	 * @type function
+	 * @memberof LuCI.form.Button.prototype
+	 * @member onclick
+	 * @type {function()}
 	 * @default null
 	 */
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var value = (cfgvalue != null) ? cfgvalue : this.default,
-		    hiddenEl = new ui.Hiddenfield(value, { id: this.cbid(section_id) }),
-		    outputEl = E('div'),
-		    btn_title = this.titleFn('inputtitle', section_id) || this.titleFn('title', section_id);
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const value = (cfgvalue != null) ? cfgvalue : this.default;
+		const hiddenEl = new ui.Hiddenfield(value, { id: this.cbid(section_id) });
+		const outputEl = E('output', {'for': this.cbid(section_id)});
+		const btn_title = this.titleFn('inputtitle', section_id) ?? this.titleFn('title', section_id);
 
 		if (value !== false)
 			dom.content(outputEl, [
 				E('button', {
-					'class': 'cbi-button cbi-button-%s'.format(this.inputstyle || 'button'),
-					'click': ui.createHandlerFn(this, function(section_id, ev) {
+					'class': 'cbi-button cbi-button-%s'.format(this.inputstyle ?? 'button'),
+					'click': ui.createHandlerFn(this, (section_id, ev) => {
 						if (this.onclick)
 							return this.onclick(ev, section_id);
 
 						ev.currentTarget.parentNode.nextElementSibling.value = value;
 						return this.map.save();
 					}, section_id),
-					'disabled': ((this.readonly != null) ? this.readonly : this.map.readonly) || null
+					'disabled': (this.readonly ?? this.map.readonly) || null
 				}, [ btn_title ])
 			]);
 		else
@@ -4497,7 +5636,7 @@ var CBIButtonValue = CBIValue.extend(/** @lends LuCI.form.ButtonValue.prototype 
  * @hideconstructor
  * @classdesc
  *
- * The `HiddenValue` element wraps an {@link LuCI.ui.Hiddenfield} widget.
+ * The `HiddenValue` element wraps a {@link LuCI.ui.Hiddenfield} widget.
  *
  * Hidden value widgets used to be necessary in legacy code which actually
  * submitted the underlying HTML form the server. With client side handling of
@@ -4508,7 +5647,7 @@ var CBIButtonValue = CBIValue.extend(/** @lends LuCI.form.ButtonValue.prototype 
  * distorted form layout when rendering the option element.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added to. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -4528,12 +5667,18 @@ var CBIButtonValue = CBIValue.extend(/** @lends LuCI.form.ButtonValue.prototype 
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIHiddenValue = CBIValue.extend(/** @lends LuCI.form.HiddenValue.prototype */ {
+const CBIHiddenValue = CBIValue.extend(/** @lends LuCI.form.HiddenValue.prototype */ {
 	__name__: 'CBI.HiddenValue',
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var widget = new ui.Hiddenfield((cfgvalue != null) ? cfgvalue : this.default, {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const widget = new ui.Hiddenfield((cfgvalue != null) ? cfgvalue : this.default, {
 			id: this.cbid(section_id)
 		});
 
@@ -4548,17 +5693,17 @@ var CBIHiddenValue = CBIValue.extend(/** @lends LuCI.form.HiddenValue.prototype 
  * @hideconstructor
  * @classdesc
  *
- * The `FileUpload` element wraps an {@link LuCI.ui.FileUpload} widget and
+ * The `FileUpload` element wraps a {@link LuCI.ui.FileUpload} widget and
  * offers the ability to browse, upload and select remote files.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
  *
  * @param {LuCI.form.AbstractSection} section
- * The configuration section this option is added to. It is automatically passed
+ * The configuration section this option is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -4572,29 +5717,45 @@ var CBIHiddenValue = CBIValue.extend(/** @lends LuCI.form.HiddenValue.prototype 
  * @param {string} [description]
  * The description text of the option element.
  */
-var CBIFileUpload = CBIValue.extend(/** @lends LuCI.form.FileUpload.prototype */ {
+const CBIFileUpload = CBIValue.extend(/** @lends LuCI.form.FileUpload.prototype */ {
 	__name__: 'CBI.FileSelect',
 
-	__init__: function(/* ... */) {
-		this.super('__init__', arguments);
+	__init__(...args) {
+		this.super('__init__', args);
 
+		this.browser = false;
+		this.directory_create = false;
+		this.directory_select = false;
 		this.show_hidden = false;
 		this.enable_upload = true;
 		this.enable_remove = true;
+		this.enable_download = false;
 		this.root_directory = '/etc/luci-uploads';
 	},
+
+
+	/**
+	 * Render the widget in browser mode initially instead of a button
+	 * to 'Select File...'.
+	 *
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member browser
+	 * @type {boolean}
+	 * @default false
+	 */
 
 	/**
 	 * Toggle display of hidden files.
 	 *
 	 * Display hidden files when rendering the remote directory listing.
-	 * Note that this is merely a cosmetic feature, hidden files are always
+	 * Note that this is merely a cosmetic feature: hidden files are always
 	 * included in received remote file listings.
 	 *
-	 * The default is `false`, means hidden files are not displayed.
+	 * The default of `false` means hidden files are not displayed.
 	 *
-	 * @name LuCI.form.FileUpload.prototype#show_hidden
-	 * @type boolean
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member show_hidden
+	 * @type {boolean}
 	 * @default false
 	 */
 
@@ -4603,56 +5764,418 @@ var CBIFileUpload = CBIValue.extend(/** @lends LuCI.form.FileUpload.prototype */
 	 *
 	 * When set to `true`, the underlying widget provides a button which lets
 	 * the user select and upload local files to the remote system.
-	 * Note that this is merely a cosmetic feature, remote upload access is
+	 * Note that this is merely a cosmetic feature: remote upload access is
 	 * controlled by the session ACL rules.
 	 *
-	 * The default is `true`, means file upload functionality is displayed.
+	 * The default of `true` means file upload functionality is displayed.
 	 *
-	 * @name LuCI.form.FileUpload.prototype#enable_upload
-	 * @type boolean
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member enable_upload
+	 * @type {boolean}
 	 * @default true
+	 */
+
+	/**
+	 * Toggle remote directory create functionality.
+	 *
+	 * When set to `true`, the underlying widget provides a button which lets
+	 * the user create directories. Note that this is merely
+	 * a cosmetic feature: remote create permissions are controlled by the
+	 * session ACL rules.
+	 *
+	 * The default of `false` means the directory create button is hidden.
+	 *
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member directory_create
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Toggle remote directory select functionality.
+	 *
+	 * When set to `true`, the underlying widget changes behaviour to select
+	 * directories instead of files, in effect, becoming a directory
+	 * picker.
+	 *
+	 * The default is `false`.
+	 *
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member directory_select
+	 * @type {boolean}
+	 * @default false
 	 */
 
 	/**
 	 * Toggle remote file delete functionality.
 	 *
-	 * When set to `true`, the underlying widget provides a buttons which let
+	 * When set to `true`, the underlying widget provides buttons which let
 	 * the user delete files from remote directories. Note that this is merely
-	 * a cosmetic feature, remote delete permissions are controlled by the
+	 * a cosmetic feature: remote delete permissions are controlled by the
 	 * session ACL rules.
 	 *
 	 * The default is `true`, means file removal buttons are displayed.
 	 *
-	 * @name LuCI.form.FileUpload.prototype#enable_remove
-	 * @type boolean
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member enable_remove
+	 * @type {boolean}
 	 * @default true
+	 */
+
+	/**
+	 * Toggle download file functionality.
+	 *
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member enable_download
+	 * @type {boolean}
+	 * @default false
 	 */
 
 	/**
 	 * Specify the root directory for file browsing.
 	 *
 	 * This property defines the topmost directory the file browser widget may
-	 * navigate to, the UI will not allow browsing directories outside this
-	 * prefix. Note that this is merely a cosmetic feature, remote file access
+	 * navigate to. The UI will not allow browsing directories outside this
+	 * prefix. Note that this is merely a cosmetic feature: remote file access
 	 * and directory listing permissions are controlled by the session ACL
 	 * rules.
 	 *
 	 * The default is `/etc/luci-uploads`.
 	 *
-	 * @name LuCI.form.FileUpload.prototype#root_directory
-	 * @type string
+	 * @memberof LuCI.form.FileUpload.prototype
+	 * @member root_directory
+	 * @type {string}
 	 * @default /etc/luci-uploads
 	 */
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
-		var browserEl = new ui.FileUpload((cfgvalue != null) ? cfgvalue : this.default, {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const browserEl = new ui.FileUpload((cfgvalue != null) ? cfgvalue : this.default, {
 			id: this.cbid(section_id),
 			name: this.cbid(section_id),
+			browser: this.browser,
 			show_hidden: this.show_hidden,
+			directory_create: this.directory_create,
+			directory_select: this.directory_select,
+			enable_upload: this.enable_upload,
+			enable_remove: this.enable_remove,
+			enable_download: this.enable_download,
+			root_directory: this.root_directory,
+			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
+		});
+
+		return browserEl.render();
+	}
+});
+
+/**
+ * @class FileUploadList
+ * @memberof LuCI.form
+ * @augments LuCI.form.DynamicList
+ * @hideconstructor
+ * @classdesc
+ *
+ * The `FileUploadList` element wraps a {@link LuCI.ui.FileUploadList} widget
+ * and offers the ability to select multiple remote files below a root
+ * directory, to upload further files into it and to delete files from it.
+ * The values are stored as absolute paths unless
+ * [absolute_path]{@link LuCI.form.FileUploadList#absolute_path} is disabled.
+ *
+ * @param {LuCI.form.Map|LuCI.form.JSONMap} form
+ * The configuration form to which this section is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {LuCI.form.AbstractSection} section
+ * The configuration section this option is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {string} option
+ * The name of the UCI option to map.
+ *
+ * @param {string} [title]
+ * The title caption of the option element.
+ *
+ * @param {string} [description]
+ * The description text of the option element.
+ */
+const CBIFileUploadList = CBIDynamicList.extend(/** @lends LuCI.form.FileUploadList.prototype */ {
+	__name__: 'CBI.FileUploadList',
+
+	__init__(...args) {
+		this.super('__init__', args);
+
+		this.enable_upload = false;
+		this.enable_remove = false;
+		this.root_directory = '/etc/luci-uploads';
+		this.absolute_path = true;
+	},
+
+	/**
+	 * Toggle file upload functionality.
+	 *
+	 * When set to `true`, the underlying widget provides a button which lets
+	 * the user select and upload local files into the root directory.
+	 * Note that this is merely a cosmetic feature: remote upload access is
+	 * controlled by the session ACL rules.
+	 * The default of `false` means file upload functionality is hidden.
+	 * The default of `true` means file upload functionality is displayed.
+	 *
+	 * @memberof LuCI.form.FileUploadList.prototype
+	 * @member enable_upload
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Toggle remote file delete functionality.
+	 *
+	 * When set to `true`, the underlying widget provides buttons which let
+	 * the user delete files from the root directory. Note that this is merely
+	 * a cosmetic feature: remote delete permissions are controlled by the
+	 * session ACL rules.
+	 * The default of `false` means file removal buttons are hidden.
+	 * The default of `true` means file removal buttons are displayed.
+	 *
+	 * @memberof LuCI.form.FileUploadList.prototype
+	 * @member enable_remove
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Specify the directory holding the selectable files.
+	 *
+	 * The files in this directory are offered as choices and uploaded files
+	 * are stored here. Note that this is merely a cosmetic feature: remote
+	 * file access and directory listing permissions are controlled by the
+	 * session ACL rules.
+	 *
+	 * The default is `/etc/luci-uploads`.
+	 *
+	 * @memberof LuCI.form.FileUploadList.prototype
+	 * @member root_directory
+	 * @type {string}
+	 * @default /etc/luci-uploads
+	 */
+
+	/**
+	 * Store absolute paths instead of file names.
+	 *
+	 * When set to `true`, the values are the absolute paths of the selected
+	 * files like with {@link LuCI.form.FileUpload}. When set to `false`, the
+	 * values are the file names relative to the root directory.
+	 *
+	 * The default is `true`.
+	 *
+	 * @memberof LuCI.form.FileUploadList.prototype
+	 * @member absolute_path
+	 * @type {boolean}
+	 * @default true
+	 */
+
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const value = (cfgvalue != null) ? cfgvalue : this.default;
+
+		const widget = new ui.FileUploadList(L.toArray(value), this.transformChoices(), {
+			id: this.cbid(section_id),
+			sort: this.keylist,
+			allowduplicates: this.allowduplicates,
+			optional: this.optional || this.rmempty,
+			datatype: this.datatype,
+			placeholder: this.placeholder,
+			validate: this.getValidator(section_id),
 			enable_upload: this.enable_upload,
 			enable_remove: this.enable_remove,
 			root_directory: this.root_directory,
+			absolute_path: this.absolute_path,
+			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
+		});
+
+		return widget.render();
+	}
+});
+
+/**
+ * @class DirectoryPicker
+ * @memberof LuCI.form
+ * @augments LuCI.form.Value
+ * @hideconstructor
+ * @classdesc
+ *
+ * The `DirectoryPicker` element wraps a {@link LuCI.ui.FileUpload} widget and
+ * offers the ability to browse, create, delete and select remote directories.
+ *
+ * @param {LuCI.form.Map|LuCI.form.JSONMap} form
+ * The configuration form to which this section is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {LuCI.form.AbstractSection} section
+ * The configuration section this option is added. It is automatically passed
+ * by [option()]{@link LuCI.form.AbstractSection#option} or
+ * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
+ * option to the section.
+ *
+ * @param {string} option
+ * The name of the UCI option to map.
+ *
+ * @param {string} [title]
+ * The title caption of the option element.
+ *
+ * @param {string} [description]
+ * The description text of the option element.
+ */
+const CBIDirectoryPicker = CBIValue.extend(/** @lends LuCI.form.DirectoryPicker.prototype */ {
+	__name__: 'CBI.DirectoryPicker',
+
+	__init__(...args) {
+		this.super('__init__', args);
+
+		this.browser = false;
+		this.directory_create = false;
+		this.enable_download = false;
+		this.enable_remove = false;
+		this.enable_upload = false;
+		this.root_directory = '/tmp';
+		this.show_hidden = true;
+	},
+
+
+	/**
+	 * Render the widget in browser mode initially instead of a button
+	 * to 'Select Directory...'.
+	 *
+	 * @memberof LuCI.form.DirectoryPicker.prototype
+	 * @member browser
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Toggle remote directory create functionality.
+	 *
+	 * When set to `true`, the underlying widget provides a button which lets
+	 * the user create directories. Note that this is merely
+	 * a cosmetic feature: remote create permissions are controlled by the
+	 * session ACL rules.
+	 *
+	 * The default of `false` means the directory create button is hidden.
+	 *
+	 * @memberof LuCI.form.DirectoryPicker.prototype
+	 * @member directory_create
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Toggle download file functionality.
+	 *
+	 * @memberof LuCI.form.DirectoryPicker.prototype
+	 * @member enable_download
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Toggle remote file delete functionality.
+	 *
+	 * When set to `true`, the underlying widget provides buttons which let
+	 * the user delete files from remote directories. Note that this is merely
+	 * a cosmetic feature: remote delete permissions are controlled by the
+	 * session ACL rules.
+	 *
+	 * The default is `false`, means file removal buttons are not displayed.
+	 *
+	 * @memberof LuCI.form.DirectoryPicker.prototype
+	 * @member enable_remove
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Toggle file upload functionality.
+	 *
+	 * When set to `true`, the underlying widget provides a button which lets
+	 * the user select and upload local files to the remote system.
+	 * Note that this is merely a cosmetic feature: remote upload access is
+	 * controlled by the session ACL rules.
+	 *
+	 * The default of `false` means file upload functionality is disabled.
+	 *
+	 * @memberof LuCI.form.DirectoryPicker.prototype
+	 * @member enable_upload
+	 * @type {boolean}
+	 * @default false
+	 */
+
+	/**
+	 * Specify the root directory for file browsing.
+	 *
+	 * This property defines the topmost directory the file browser widget may
+	 * navigate to. The UI will not allow browsing directories outside this
+	 * prefix. Note that this is merely a cosmetic feature: remote file access
+	 * and directory listing permissions are controlled by the session ACL
+	 * rules.
+	 *
+	 * The default is `/tmp`.
+	 *
+	 * @memberof LuCI.form.DirectoryPicker.prototype
+	 * @member root_directory
+	 * @type {string}
+	 * @default /tmp
+	 */
+
+	/**
+	 * Toggle display of hidden files.
+	 *
+	 * Display hidden files when rendering the remote directory listing.
+	 * Note that this is merely a cosmetic feature: hidden files are always
+	 * included in received remote file listings.
+	 *
+	 * The default of `true` means hidden files are displayed.
+	 *
+	 * @memberof LuCI.form.DirectoryPicker.prototype
+	 * @member {boolean} show_hidden
+	 * @default true
+	 */
+
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
+		const browserEl = new ui.FileUpload((cfgvalue != null) ? cfgvalue : this.default, {
+			id: this.cbid(section_id),
+			name: this.cbid(section_id),
+			browser: this.browser,
+			directory_create: this.directory_create,
+			directory_select: true,
+			enable_download: this.enable_download,
+			enable_remove: this.enable_remove,
+			enable_upload: this.enable_upload,
+			root_directory: this.root_directory,
+			show_hidden: this.show_hidden,
 			disabled: (this.readonly != null) ? this.readonly : this.map.readonly
 		});
 
@@ -4671,13 +6194,13 @@ var CBIFileUpload = CBIValue.extend(/** @lends LuCI.form.FileUpload.prototype */
  * element container, allowing to nest form sections into other sections.
  *
  * @param {LuCI.form.Map|LuCI.form.JSONMap} form
- * The configuration form this section is added to. It is automatically passed
+ * The configuration form to which this section is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
  *
  * @param {LuCI.form.AbstractSection} section
- * The configuration section this option is added to. It is automatically passed
+ * The configuration section to which this option is added. It is automatically passed
  * by [option()]{@link LuCI.form.AbstractSection#option} or
  * [taboption()]{@link LuCI.form.AbstractSection#taboption} when adding the
  * option to the section.
@@ -4698,15 +6221,15 @@ var CBIFileUpload = CBIValue.extend(/** @lends LuCI.form.FileUpload.prototype */
  * All further arguments are passed as-is to the subclass constructor. Refer
  * to the corresponding class constructor documentations for details.
  */
-var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototype */ {
+const CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototype */ {
 	__name__: 'CBI.ContainerValue',
-	__init__: function(map, section, option, cbiClass /*, ... */) {
-		this.super('__init__', [map, section, option]);
+	__init__(map, section, option, cbiClass, ...args) {
+		this.super('__init__', [ map, section, option ]);
 
 		if (!CBIAbstractSection.isSubclass(cbiClass))
-			throw 'Sub section must be a descendent of CBIAbstractSection';
+			throw 'Sub section must be a descendant of CBIAbstractSection';
 
-		this.subsection = cbiClass.instantiate(this.varargs(arguments, 4, this.map));
+		this.subsection = cbiClass.instantiate([ this.map, ...args ]);
 		this.subsection.parentoption = this;
 	},
 
@@ -4715,28 +6238,39 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
 	 *
 	 * This property holds a reference to the instantiated nested section.
 	 *
-	 * @name LuCI.form.SectionValue.prototype#subsection
-	 * @type LuCI.form.AbstractSection
+	 * @memberof LuCI.form.SectionValue
+	 * @member subsection
+	 * @type {LuCI.form.AbstractSection}
 	 * @readonly
 	 */
 
 	/** @override */
-	load: function(section_id) {
+	load(section_id) {
 		return this.subsection.load(section_id);
 	},
 
 	/** @override */
-	parse: function(section_id) {
+	parse(section_id) {
 		return this.subsection.parse(section_id);
 	},
 
-	/** @private */
-	renderWidget: function(section_id, option_index, cfgvalue) {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @param {number} option_index
+	 * @param {string} cfgvalue
+	 * @returns {Node}
+	 */
+	renderWidget(section_id, option_index, cfgvalue) {
 		return this.subsection.render(section_id);
 	},
 
-	/** @private */
-	checkDepends: function(section_id) {
+	/**
+	 * @private
+	 * @param {string} section_id
+	 * @returns {null}
+	 */
+	checkDepends(section_id) {
 		this.subsection.checkDepends(section_id);
 		return CBIValue.prototype.checkDepends.apply(this, [ section_id ]);
 	},
@@ -4747,7 +6281,7 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
 	 *
 	 * @override
 	 */
-	value: function() {},
+	value() {},
 
 	/**
 	 * Since the section container is not tied to any UCI configuration,
@@ -4755,7 +6289,7 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
 	 *
 	 * @override
 	 */
-	write: function() {},
+	write() {},
 
 	/**
 	 * Since the section container is not tied to any UCI configuration,
@@ -4763,7 +6297,7 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
 	 *
 	 * @override
 	 */
-	remove: function() {},
+	remove() {},
 
 	/**
 	 * Since the section container is not tied to any UCI configuration,
@@ -4772,7 +6306,7 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
 	 * @override
 	 * @returns {null}
 	 */
-	cfgvalue: function() { return null },
+	cfgvalue() { return null },
 
 	/**
 	 * Since the section container is not tied to any UCI configuration,
@@ -4781,7 +6315,7 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
 	 * @override
 	 * @returns {null}
 	 */
-	formvalue: function() { return null }
+	formvalue() { return null }
 });
 
 /**
@@ -4790,7 +6324,7 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
  * @hideconstructor
  * @classdesc
  *
- * The LuCI form class provides high level abstractions for creating creating
+ * The LuCI form class provides high level abstractions for creating
  * UCI- or JSON backed configurations forms.
  *
  * To import the class in views, use `'require form'`, to import it in
@@ -4802,30 +6336,28 @@ var CBISectionValue = CBIValue.extend(/** @lends LuCI.form.SectionValue.prototyp
  * [render()]{@link LuCI.form.Map#render} is invoked on the instance to
  * assemble the HTML markup and insert it into the DOM.
  *
- * Example:
+ * @example
  *
- * <pre>
  * 'use strict';
  * 'require form';
  *
- * var m, s, o;
+ * let m, s, o;
  *
- * m = new form.Map('example', 'Example form',
- *	'This is an example form mapping the contents of /etc/config/example');
+ * m = new form.Map('example', _('Example form'),
+ *	_('This is an example form mapping the contents of /etc/config/example'));
  *
- * s = m.section(form.NamedSection, 'first_section', 'example', 'The first section',
- * 	'This sections maps "config example first_section" of /etc/config/example');
+ * s = m.section(form.NamedSection, 'first_section', 'example', _('The first section'),
+ * 	_('This sections maps "config example first_section" of /etc/config/example'));
  *
- * o = s.option(form.Flag, 'some_bool', 'A checkbox option');
+ * o = s.option(form.Flag, 'some_bool', _('A checkbox option'));
  *
- * o = s.option(form.ListValue, 'some_choice', 'A select element');
- * o.value('choice1', 'The first choice');
- * o.value('choice2', 'The second choice');
+ * o = s.option(form.ListValue, 'some_choice', _('A select element'));
+ * o.value('choice1', _('The first choice'));
+ * o.value('choice2', _('The second choice'));
  *
- * m.render().then(function(node) {
+ * m.render().then((node) => {
  * 	document.body.appendChild(node);
  * });
- * </pre>
  */
 return baseclass.extend(/** @lends LuCI.form.prototype */ {
 	Map: CBIMap,
@@ -4841,6 +6373,8 @@ return baseclass.extend(/** @lends LuCI.form.prototype */ {
 	Value: CBIValue,
 	DynamicList: CBIDynamicList,
 	ListValue: CBIListValue,
+	RichListValue: CBIRichListValue,
+	RangeSliderValue: CBIRangeSliderValue,
 	Flag: CBIFlagValue,
 	MultiValue: CBIMultiValue,
 	TextValue: CBITextValue,
@@ -4848,5 +6382,7 @@ return baseclass.extend(/** @lends LuCI.form.prototype */ {
 	Button: CBIButtonValue,
 	HiddenValue: CBIHiddenValue,
 	FileUpload: CBIFileUpload,
+	FileUploadList: CBIFileUploadList,
+	DirectoryPicker: CBIDirectoryPicker,
 	SectionValue: CBISectionValue
 });

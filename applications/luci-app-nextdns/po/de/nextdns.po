@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-02-24 06:56+0000\n"
+"PO-Revision-Date: 2026-02-14 15:04+0000\n"
 "Last-Translator: ssantos <ssantos@web.de>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/openwrt/"
 "luciapplicationsnextdns/de/>\n"
@@ -8,11 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.11-dev\n"
-
-#: applications/luci-app-nextdns/root/usr/share/luci/menu.d/luci-app-nextdns.json:24
-msgid "Configuration"
-msgstr "Konfiguration"
+"X-Generator: Weblate 5.16-dev\n"
 
 #: applications/luci-app-nextdns/htdocs/luci-static/resources/view/nextdns/overview.js:23
 msgid "Configuration ID"
@@ -31,12 +27,8 @@ msgid "Expose LAN clients information in NextDNS analytics."
 msgstr "Machen Sie LAN-Client-Informationen in NextDNS Analytics verfügbar."
 
 #: applications/luci-app-nextdns/htdocs/luci-static/resources/view/nextdns/overview.js:12
-msgid ""
-"For further information, go to <a href=\"https://nextdns.io\" target=\"_blank"
-"\">nextdns.io</a>."
-msgstr ""
-"Für weitergehende Informationen, siehe <a href=\"https://nextdns.io\" target="
-"\"_blank\">nextdns.io</a>."
+msgid "For further information, go to %s."
+msgstr "Weitere Informationen finden Sie in %."
 
 #: applications/luci-app-nextdns/htdocs/luci-static/resources/view/nextdns/overview.js:15
 msgid "General"
@@ -58,6 +50,10 @@ msgstr "Protokollabfragen"
 msgid "Log individual queries to system log."
 msgstr "Protokollieren Sie einzelne Abfragen in das Systemprotokoll."
 
+#: applications/luci-app-nextdns/root/usr/share/luci/menu.d/luci-app-nextdns.json:24
+msgid "Logs"
+msgstr "Protokolle"
+
 #: applications/luci-app-nextdns/htdocs/luci-static/resources/view/nextdns/overview.js:9
 #: applications/luci-app-nextdns/root/usr/share/luci/menu.d/luci-app-nextdns.json:3
 msgid "NextDNS"
@@ -67,9 +63,9 @@ msgstr "NextDNS"
 msgid "NextDNS Configuration."
 msgstr "NextDNS-Konfiguration."
 
-#: applications/luci-app-nextdns/htdocs/luci-static/resources/view/nextdns/logread.js:15
-msgid "No nextdns related logs yet!"
-msgstr "Noch keine Nextdns-Protokolle!"
+#: applications/luci-app-nextdns/htdocs/luci-static/resources/view/nextdns/logread.js:4
+msgid "NextDNS Log"
+msgstr "NextDNS-Log"
 
 #: applications/luci-app-nextdns/root/usr/share/luci/menu.d/luci-app-nextdns.json:15
 msgid "Overview"
@@ -83,32 +79,9 @@ msgstr "Client-Info melden"
 msgid "The ID of your NextDNS configuration."
 msgstr "Die ID deiner NextDNS-Konfiguration."
 
-#: applications/luci-app-nextdns/htdocs/luci-static/resources/view/nextdns/logread.js:24
-msgid "The syslog output, pre-filtered for nextdns related messages only."
-msgstr "Syslog-Ausgabe, vor-gefiltert für Meldungen nur mit Bezug zu nextdns."
-
 #~ msgid ""
-#~ "Available locations are: Switzerland, Iceland, Finland, Panama and Hong "
-#~ "Kong."
+#~ "For further information, go to <a href=\"https://nextdns.io\" "
+#~ "target=\"_blank\">nextdns.io</a>."
 #~ msgstr ""
-#~ "Verfügbare Standorte sind: Schweiz, Island, Finnland, Panama und Hongkong."
-
-#~ msgid "Hardened Privacy"
-#~ msgstr "Verstärkte Privatsphäre"
-
-#~ msgid ""
-#~ "When enabled, use DNS servers located in jurisdictions with strong "
-#~ "privacy laws."
-#~ msgstr ""
-#~ "Wenn diese Option aktiviert ist, verwenden Sie DNS-Server in "
-#~ "Rechtsordnungen mit strengen Datenschutzgesetzen."
-
-#~ msgid "Logs"
-#~ msgstr "Protokolle"
-
-#~ msgid ""
-#~ "For further information, go to <a href=\"https://nextdns.io\" target="
-#~ "\"_blank\">nextdns.io</a>"
-#~ msgstr ""
-#~ "Weitere Informationen finden Sie unter <a href=\"https://nextdns.io\" "
-#~ "target=\"_blank\">nextdns.io</a>"
+#~ "Für weitergehende Informationen, siehe <a href=\"https://nextdns.io\" "
+#~ "target=\"_blank\">nextdns.io</a>."

@@ -1,4 +1,3 @@
--- Copyright 2015 Daniel Dickinson <openwrt@daniel.thecshore.com>
 -- Licensed to the public under the Apache License 2.0.
 
 local netmod = luci.model.network
@@ -17,7 +16,7 @@ function proto.get_interface(self)
 	return interface(self:ifname(), self)
 end
 
-function proto.opkg_package(self)
+function proto.package_name(self)
 	return "vpnc"
 end
 

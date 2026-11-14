@@ -16,8 +16,15 @@
 			},
 			"ubus": {
 				"file": [ "list", "read" ],
+				"luci": [ "getUnixtime" ],
+				"luci.dashboard": [ "history" ],
+				"luci.dashboard.temperature": [ "read" ],
 				"system": [ "board", "info" ]
-			}
+			},
+			"uci": [ "dashboard" ]
+		},
+		"write": {
+			"uci": [ "dashboard" ]
 		}
 	},
 

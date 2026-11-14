@@ -2,15 +2,23 @@
 	"luci-mod-system-config": {
 		"description": "Grant access to system configuration",
 		"read": {
-			"ubus": {
-				"luci": [ "getInitList", "getLEDs", "getTimezones", "getUSBDevices" ],
-				"system": [ "info" ]
+			"cgi-io": [ "read" ],
+			"file": {
+				"/etc/passwd": [ "read" ]
 			},
-			"uci": [ "luci", "system" ]
+			"ubus": {
+				"luci": [ "getLEDs", "getTimezones", "getUSBDevices", "getUnixtime" ],
+				"rc": [ "list" ]
+			},
+			"uci": [ "luci", "system", "rpcd" ]
 		},
 		"write": {
+			"file": {
+				"/usr/sbin/uhttpd -m *": [ "exec" ]
+			},
 			"ubus": {
-				"luci": [ "setInitAction", "setLocaltime", "setPassword" ]
+				"luci": [ "setLocaltime", "setPassword" ],
+				"rc": [ "init" ]
 			},
 			"uci": [ "luci", "system" ]
 		}
@@ -33,9 +41,40 @@
 			},
 			"ubus": {
 				"file": [ "write" ],
-				"luci": [ "setInitAction", "setLocaltime" ]
+				"luci": [ "setLocaltime" ]
 			},
 			"uci": [ "dropbear" ]
+		}
+	},
+
+	"luci-mod-system-repokeys": {
+		"description": "Grant access to Software Repository Public Key management",
+		"read": {
+			"file": {
+				"/etc/opkg/keys/*": [ "read" ],
+				"/etc/apk/keys/*": [ "read" ]
+			}
+		},
+		"write": {
+			"file": {
+				"/etc/opkg/keys/*": [ "write" ],
+				"/etc/apk/keys/*": [ "write" ]
+			}
+		}
+	},
+
+	"luci-mod-system-plugins": {
+		"description": "Grant access to Plugin management",
+		"read": {
+			"file": {
+				"/usr/share/ucode/luci/*": [ "read" ],
+				"/www/luci-static/resources/view/plugins": [ "list" ],
+				"/www/luci-static/resources/view/plugins/*": [ "read" ]
+			},
+			"uci": [ "luci_plugins" ]
+		},
+		"write": {
+			"uci": [ "luci_plugins" ]
 		}
 	},
 
@@ -45,9 +84,6 @@
 			"uci": [ "uhttpd" ]
 		},
 		"write": {
-			"ubus": {
-				"luci": [ "setInitAction" ]
-			},
 			"uci": [ "uhttpd" ]
 		}
 	},
@@ -61,7 +97,7 @@
 			},
 			"ubus": {
 				"file": [ "read" ],
-				"luci": [ "getInitList" ]
+				"rc": [ "list" ]
 			}
 		},
 		"write": {
@@ -70,7 +106,7 @@
 			},
 			"ubus": {
 				"file": [ "write" ],
-				"luci": [ "setInitAction" ]
+				"rc": [ "init" ]
 			}
 		}
 	},
@@ -116,7 +152,6 @@
 		},
 		"write": {
 			"file": {
-				"/etc/crontabs/root": [ "write" ],
 				"/bin/umount": [ "exec" ],
 				"/sbin/block": [ "exec" ]
 			},
@@ -137,6 +172,7 @@
 				"/etc/sysupgrade.conf": [ "read" ],
 				"/lib/upgrade/platform.sh": [ "list" ],
 				"/proc/mounts": [ "read" ],
+				"/proc/*/mounts": [ "read" ],
 				"/proc/mtd": [ "read" ],
 				"/proc/partitions": [ "read" ],
 				"/proc/sys/kernel/hostname": [ "read" ],
@@ -186,5 +222,16 @@
 				"system": [ "reboot" ]
 			}
 		}
+	},
+
+	"luci-mod-system-pwpolicy": {
+		"description": "Grant access to password policy configuration",
+		"read": {
+			"uci": [ "rpcd" ]
+		},
+		"write": {
+			"uci": [ "rpcd" ]
+		}
 	}
+
 }

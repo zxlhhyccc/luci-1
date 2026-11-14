@@ -1,13 +1,15 @@
-# Copyright 2017-2022 Dirk Brenken (dev@brenken.org)
+# Copyright 2017-2026 Dirk Brenken (dev@brenken.org)
 # This is free software, licensed under the Apache License, Version 2.0
 
 include $(TOPDIR)/rules.mk
 
 LUCI_TITLE:=LuCI support for Travelmate
-LUCI_DEPENDS:=+travelmate +luci-lib-jsonc
-LUCI_PKGARCH:=all
+LUCI_DEPENDS:=+luci-base +luci-lib-uqr +travelmate
 
+PKG_VERSION:=3.0.0
+PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
+PKG_MAINTAINER:=Dirk Brenken <dev@brenken.org>
 
 include ../../luci.mk
 

@@ -2,37 +2,111 @@
 	"luci-app-banip": {
 		"description": "Grant access to LuCI app banIP",
 		"write": {
-			"uci": [ "banip" ],
+			"cgi-io": [
+				"upload"
+			],
+			"ubus": {
+				"file": [
+					"write"
+				]
+			},
+			"uci": [
+				"banip"
+			],
 			"file": {
-				"/etc/banip/*": [ "read" ],
-				"/etc/banip/banip.blacklist": [ "write" ],
-				"/etc/banip/banip.whitelist": [ "write" ],
-				"/etc/banip/banip.maclist": [ "write" ]
+				"/etc/banip/banip.allowlist": [
+					"write"
+				],
+				"/etc/banip/banip.blocklist": [
+					"write"
+				],
+				"/etc/banip/banip.custom.feeds": [
+					"write"
+				],
+				"/var/run/banIP/banIP.search": [
+					"write"
+				],
+				"/tmp/run/banIP/banIP.search": [
+					"write"
+				],
+				"/var/run/banIP/banIP.report": [
+					"write"
+				],
+				"/tmp/run/banIP/banIP.report": [
+					"write"
+				],
+				"/etc/init.d/banip stop": [
+					"exec"
+				],
+				"/etc/init.d/banip reload": [
+					"exec"
+				],
+				"/etc/init.d/banip restart": [
+					"exec"
+				],
+				"/etc/init.d/banip report gen": [
+					"exec"
+				],
+				"/etc/init.d/banip search *": [
+					"exec"
+				]
 			}
 		},
 		"read": {
-			"cgi-io": [ "exec" ],
+			"cgi-io": [
+				"download",
+				"exec"
+			],
 			"file": {
-				"/var/run/banip.pid": [ "read" ],
-				"/tmp/ban_runtime.json": [ "read" ],
-				"/sbin/logread -e banIP-": [ "exec" ],
-				"/usr/sbin/logread -e banIP-": [ "exec" ],
-				"/usr/sbin/iptables -L": [ "exec" ],
-				"/usr/sbin/ip6tables -L": [ "exec" ],
-				"/etc/init.d/banip list" : [ "exec" ],
-				"/etc/init.d/banip refresh" : [ "exec" ],
-				"/etc/init.d/banip reload" : [ "exec" ],
-				"/etc/init.d/banip restart" : [ "exec" ],
-				"/etc/init.d/banip suspend" : [ "exec" ],
-				"/etc/init.d/banip resume" : [ "exec" ],
-				"/etc/init.d/banip report gen" : [ "exec" ],
-				"/etc/init.d/banip report json" : [ "exec" ],
-				"/etc/init.d/banip timer list" : [ "exec" ],
-				"/etc/init.d/banip timer remove [0-9]*" : [ "exec" ],
-				"/etc/init.d/banip timer add * [0-9]* [0-9*]* [1-7,-*]*" : [ "exec" ],
-				"/etc/init.d/banip query *" : [ "exec" ]
+				"/etc/banip/*": [
+					"read",
+					"list"
+				],
+				"/var/run/banIP/banIP.runtime.json": [
+					"read",
+					"list"
+				],
+				"/tmp/run/banIP/banIP.runtime.json": [
+					"read",
+					"list"
+				],
+				"/var/run/banIP/banIP.search": [
+					"read"
+				],
+				"/tmp/run/banIP/banIP.search": [
+					"read"
+				],
+				"/var/run/banIP/banIP.report": [
+					"read"
+				],
+				"/tmp/run/banIP/banIP.report": [
+					"read"
+				],
+				"/usr/sbin/nft -tj list sets": [
+					"exec"
+				],
+				"/etc/init.d/banip actual": [
+					"exec"
+				],
+				"/etc/init.d/banip report json": [
+					"exec"
+				],
+				"/etc/init.d/banip content *": [
+					"exec"
+				]
 			},
-			"uci": [ "banip" ]
+			"ubus": {
+				"file": [
+					"read",
+					"stat"
+				]
+			},
+			"uci": [
+				"banip"
+			],
+			"log": [
+				"read"
+			]
 		}
 	}
 }

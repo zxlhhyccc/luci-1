@@ -14,7 +14,7 @@ return network.registerProtocol('l2tp', {
 		return this._ubus('l3_device') || 'l2tp-%s'.format(this.sid);
 	},
 
-	getOpkgPackage: function() {
+	getPackageName: function() {
 		return 'xl2tpd';
 	},
 
@@ -57,5 +57,7 @@ return network.registerProtocol('l2tp', {
 		o = s.taboption('advanced', form.Value, 'mtu', _('Override MTU'));
 		o.placeholder = dev ? (dev.getMTU() || '1500') : '1500';
 		o.datatype    = 'max(9200)';
+
+		o = s.taboption('advanced', form.Value, 'hostname', _('L2TP Hostname'));
 	}
 });
